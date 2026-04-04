@@ -7,11 +7,12 @@
 - [x] Task-003: Team Data Parser (commit: 587ba42)
 - [x] Task-004: EV Calculator Engine (commit: 4ac4762)
 - [x] Task-005: Auction Dashboard UI (commit: 17fa7fd)
+- [x] Task-006: Fame Premium & Adjustments (commit: 8741f2b)
 
 ## Current Iteration
 
-- Iteration: 5
-- Working on: Task-006
+- Iteration: 6
+- Working on: Task-007
 - Started: 2026-04-03
 
 ## Blockers

@@ -2,6 +2,10 @@ import { atom } from 'jotai';
 import type { Player, Team, AuctionEntry, PayoutConfig, FamePremium } from '../types';
 import { calculateAllTeamEVs } from '../utils/evCalculator';
 
+// Current view
+export type View = 'dashboard' | 'setup';
+export const viewAtom = atom<View>('setup');
+
 // API key for Data Golf
 export const apiKeyAtom = atom<string>('');
 

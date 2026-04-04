@@ -1,14 +1,12 @@
-import { useState } from 'react';
-import { useAtomValue } from 'jotai';
-import { teamsAtom } from './atoms';
+import { useAtom } from 'jotai';
+import { viewAtom } from './atoms';
+import type { View } from './atoms';
 import DashboardHeader from './components/DashboardHeader';
 import TeamList from './components/TeamList';
-
-type View = 'dashboard' | 'setup';
+import SetupWizard from './components/SetupWizard';
 
 function App() {
-  const teams = useAtomValue(teamsAtom);
-  const [view, setView] = useState<View>(teams.length > 0 ? 'dashboard' : 'dashboard');
+  const [view, setView] = useAtom(viewAtom);
 
   return (
     <div className="min-h-screen bg-[#f5f5f0] text-[#1a1a1a]">
@@ -44,23 +42,8 @@ function App() {
           <TeamList />
         </>
       ) : (
-        <SetupPlaceholder />
+        <SetupWizard />
       )}
-    </div>
-  );
-}
-
-function SetupPlaceholder() {
-  return (
-    <div className="flex-1 flex items-center justify-center p-8 min-h-[60vh]">
-      <div className="text-center text-gray-400">
-        <div className="text-5xl mb-4">⚙️</div>
-        <h2 className="text-xl font-bold text-gray-600 mb-2">Setup</h2>
-        <p className="text-sm">
-          Import teams, player data, and configure payout structure.
-        </p>
-        <p className="text-xs mt-2 text-gray-300">Coming in Task-007</p>
-      </div>
     </div>
   );
 }
