@@ -7,6 +7,7 @@ import {
   teamsWithEVAtom,
   poolAtom,
   famePremiumsAtom,
+  courseFitsAtom,
 } from '../atoms';
 import TeamCard from './TeamCard';
 import AuctionBlock from './AuctionBlock';
@@ -17,6 +18,7 @@ export default function TeamList() {
   const soldTeams = useAtomValue(soldTeamsAtom);
   const pool = useAtomValue(poolAtom);
   const famePremiums = useAtomValue(famePremiumsAtom);
+  const courseFits = useAtomValue(courseFitsAtom);
   const [onTheBlock, setOnTheBlock] = useAtom(onTheBlockAtom);
   const [auction, setAuction] = useAtom(auctionAtom);
 
@@ -85,6 +87,7 @@ export default function TeamList() {
                 isOnTheBlock={false}
                 pool={pool}
                 famePremiums={famePremiums}
+                courseFits={courseFits}
                 onSelect={handleSelect}
               />
             ))}
@@ -107,6 +110,7 @@ export default function TeamList() {
                   isOnTheBlock={false}
                   pool={pool}
                   famePremiums={famePremiums}
+                  courseFits={courseFits}
                   onSelect={() => {}}
                 />
               );

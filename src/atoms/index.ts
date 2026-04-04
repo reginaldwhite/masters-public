@@ -1,5 +1,5 @@
 import { atom } from 'jotai';
-import type { Player, Team, AuctionEntry, PayoutConfig, FamePremium } from '../types';
+import type { Player, Team, AuctionEntry, PayoutConfig, FamePremium, CourseFit } from '../types';
 import { calculateAllTeamEVs } from '../utils/evCalculator';
 
 // Current view
@@ -49,6 +49,9 @@ export const payoutConfigAtom = atom<PayoutConfig>({
 
 // Fame premiums for popular players
 export const famePremiumsAtom = atom<FamePremium[]>([]);
+
+// Course fit multipliers per player
+export const courseFitsAtom = atom<CourseFit[]>([]);
 
 // List of amateur player names
 export const amateursAtom = atom<string[]>([]);

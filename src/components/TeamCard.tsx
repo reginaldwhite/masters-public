@@ -1,4 +1,4 @@
-import type { Team, AuctionEntry, FamePremium } from '../types';
+import type { Team, AuctionEntry, FamePremium, CourseFit } from '../types';
 import { formatDollars, formatPercent } from '../utils/format';
 import ValueBadge from './ValueBadge';
 import { getTeamFamePremium } from '../utils/priceCalculator';
@@ -9,6 +9,7 @@ interface TeamCardProps {
   isOnTheBlock: boolean;
   pool: number;
   famePremiums: FamePremium[];
+  courseFits: CourseFit[];
   onSelect: (groupId: number) => void;
 }
 
@@ -18,11 +19,16 @@ export default function TeamCard({
   isOnTheBlock,
   pool,
   famePremiums,
+  courseFits,
   onSelect,
 }: TeamCardProps) {
   const isSold = !!auctionEntry;
   const evDollars = pool > 0 ? team.ev * pool : 0;
   const hasFamePremium = getTeamFamePremium(team, famePremiums) > 1.0;
+  const hasCourseFit = team.players.some((p) => {
+    const cf = courseFits.find((c) => c.playerName.toLowerCase() === p.name.toLowerCase());
+    return cf && cf.multiplier > 1.10;
+  });
 
   let cardBg = 'bg-white';
   let borderStyle = 'border border-gray-200';
@@ -47,6 +53,7 @@ export default function TeamCard({
           <div className="text-xs font-semibold uppercase tracking-wider text-[#006747] mb-1">
             Group {team.groupId}
             {hasFamePremium && <span className="ml-1" title="Fame premium">🔥</span>}
+            {hasCourseFit && <span className="ml-1" title="Augusta course fit">🏌️</span>}
           </div>
           <div className="space-y-0.5">
             {team.players.map((player) => (

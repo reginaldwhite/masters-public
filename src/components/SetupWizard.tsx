@@ -4,6 +4,7 @@ import {
   playersAtom,
   teamsAtom,
   famePremiumsAtom,
+  courseFitsAtom,
   amateursAtom,
   viewAtom,
   auctionAtom,
@@ -14,6 +15,7 @@ import { parseTeamData, type ParsedTeam } from '../utils/teamParser';
 import { parseAmateurs } from '../utils/amateurParser';
 import { matchPlayersToTeams } from '../utils/nameMatcher';
 import { calculateFamePremiums } from '../utils/fameCalculator';
+import { calculateCourseFits } from '../utils/courseFitCalculator';
 import StepIndicator from './StepIndicator';
 import PlayerEVTable from './PlayerEVTable';
 
@@ -24,6 +26,7 @@ export default function SetupWizard() {
   const [players, setPlayers] = useAtom(playersAtom);
   const setTeams = useSetAtom(teamsAtom);
   const setFamePremiums = useSetAtom(famePremiumsAtom);
+  const setCourseFits = useSetAtom(courseFitsAtom);
   const setAmateurs = useSetAtom(amateursAtom);
   const setView = useSetAtom(viewAtom);
   const setAuction = useSetAtom(auctionAtom);
@@ -199,6 +202,7 @@ export default function SetupWizard() {
     // 3. Store in atoms
     setTeams(teams);
     setFamePremiums(premiums);
+    setCourseFits(calculateCourseFits(players));
     // 4. Switch to dashboard
     setView('dashboard');
   };
