@@ -49,3 +49,8 @@ export interface FamePremium {
   playerName: string;
   multiplier: number;
 }
+
+export interface CourseFit {
+  playerName: string;
+  multiplier: number;
+}
