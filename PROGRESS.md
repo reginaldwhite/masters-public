@@ -22,7 +22,7 @@
 ## Phase 3 — Course Fit Multiplier
 
 - [x] Task-014: Skill Ratings Fetch + Player SG Fields (commit: 4c30917)
-- [ ] Task-015: Augusta Course Fit Calculator
+- [x] Task-015: Augusta Course Fit Calculator (commit: b070f68)
 - [ ] Task-016: Wire Course Fit into UI
 
 ## Current Iteration
