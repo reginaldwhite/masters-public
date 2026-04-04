@@ -3,9 +3,10 @@ import {
   normalizeName,
   mapDGPlayerToPlayer,
   fetchPredictions,
+  fetchSkillRatings,
   DataGolfError,
 } from '../datagolf';
-import type { DGPlayerRaw, DGResponse } from '../datagolf';
+import type { DGPlayerRaw, DGResponse, DGSkillRatingsResponse } from '../datagolf';
 
 // ── Name normalisation ───────────────────────────────────────────────────────
 
@@ -248,7 +249,57 @@ describe('fetchPredictions', () => {
     await fetchPredictions();
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      '/api/datagolf/preds/pre-tournament?tour=pga&add_position=2,3,4,6,7,8,9&file_format=json&key=my-key',
+      '/api/datagolf/preds/pre-tournament?tour=pga&event_id=14&add_position=2,3,4,6,7,8,9&file_format=json&key=my-key',
     );
+  });
+});
+
+// ── fetchSkillRatings ────────────────────────────────────────────────────────
+
+describe('fetchSkillRatings', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    // @ts-expect-error mock env
+    import.meta.env.VITE_DATAGOLF_API_KEY = 'test-key';
+  });
+
+  it('returns a Map keyed by dg_id', async () => {
+    const mockRatings: DGSkillRatingsResponse = {
+      last_updated: '2026-03-30',
+      players: [
+        { dg_id: 18417, player_name: 'Scheffler, Scottie', sg_ott: 0.708, sg_app: 0.899, sg_arg: 0.396, sg_putt: 0.568, sg_total: 2.57, driving_dist: 8.6, driving_acc: 0.04 },
+        { dg_id: 10091, player_name: 'McIlroy, Rory', sg_ott: 0.936, sg_app: 0.687, sg_arg: 0.189, sg_putt: 0.302, sg_total: 2.11, driving_dist: 19.4, driving_acc: -0.011 },
+      ],
+    };
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockRatings,
+    } as Response);
+
+    const result = await fetchSkillRatings();
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/datagolf/preds/skill-ratings?display=value&file_format=json&key=test-key',
+    );
+    expect(result.size).toBe(2);
+    expect(result.get(18417)?.sg_app).toBe(0.899);
+    expect(result.get(10091)?.sg_ott).toBe(0.936);
+  });
+
+  it('throws DataGolfError on non-OK response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({}),
+    } as Response);
+
+    await expect(fetchSkillRatings()).rejects.toBeInstanceOf(DataGolfError);
+  });
+
+  it('throws DataGolfError when API key is missing', async () => {
+    // @ts-expect-error mock env
+    import.meta.env.VITE_DATAGOLF_API_KEY = '';
+    await expect(fetchSkillRatings()).rejects.toBeInstanceOf(DataGolfError);
   });
 });

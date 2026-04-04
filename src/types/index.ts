@@ -6,6 +6,10 @@ export interface Player {
   isAmateur: boolean;
   payout2025: number;
   finish2025: string;
+  sgOtt?: number;
+  sgApp?: number;
+  sgAtg?: number;
+  sgPutt?: number;
 }
 
 export interface PositionProbabilities {

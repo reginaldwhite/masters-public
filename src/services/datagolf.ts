@@ -93,6 +93,58 @@ export class DataGolfError extends Error {
 
 const PROXY_BASE = '/api/datagolf';
 
+export interface DGSkillRating {
+  dg_id: number;
+  player_name: string; // "Last, First"
+  sg_ott: number;
+  sg_app: number;
+  sg_arg: number;
+  sg_putt: number;
+  sg_total: number;
+  driving_dist: number;
+  driving_acc: number;
+}
+
+export interface DGSkillRatingsResponse {
+  last_updated: string;
+  players: DGSkillRating[];
+}
+
+/**
+ * Fetch player skill ratings (SG splits) from DataGolf.
+ * Returns a Map from dg_id to DGSkillRating for fast lookup.
+ */
+export async function fetchSkillRatings(): Promise<Map<number, DGSkillRating>> {
+  const apiKey = import.meta.env.VITE_DATAGOLF_API_KEY ?? '';
+  if (!apiKey) throw new DataGolfError('API key is required');
+
+  const url = `${PROXY_BASE}/preds/skill-ratings?display=value&file_format=json&key=${encodeURIComponent(apiKey)}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (err) {
+    throw new DataGolfError(`Network error fetching skill ratings: ${(err as Error).message}`);
+  }
+
+  if (!response.ok) {
+    throw new DataGolfError(`Skill ratings API returned status ${response.status}`, response.status);
+  }
+
+  let data: DGSkillRatingsResponse;
+  try {
+    data = await response.json();
+  } catch {
+    throw new DataGolfError('Failed to parse skill ratings response as JSON');
+  }
+
+  const map = new Map<number, DGSkillRating>();
+  for (const p of data.players ?? []) {
+    map.set(p.dg_id, p);
+  }
+  return map;
+}
+
 export interface FetchPredictionsOptions {
   /** Which model to use – defaults to "baseline" */
   model?: 'baseline' | 'baseline_history_fit';
@@ -118,7 +170,7 @@ export async function fetchPredictions({
     throw new DataGolfError('API key is required');
   }
 
-  const url = `${PROXY_BASE}/preds/pre-tournament?tour=pga&add_position=2,3,4,6,7,8,9&file_format=json&key=${encodeURIComponent(apiKey)}`;
+  const url = `${PROXY_BASE}/preds/pre-tournament?tour=pga&event_id=14&add_position=2,3,4,6,7,8,9&file_format=json&key=${encodeURIComponent(apiKey)}`;
 
   let response: Response;
   try {

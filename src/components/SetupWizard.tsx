@@ -9,7 +9,7 @@ import {
   auctionAtom,
   onTheBlockAtom,
 } from '../atoms';
-import { fetchPredictions, DataGolfError } from '../services/datagolf';
+import { fetchPredictions, fetchSkillRatings, DataGolfError } from '../services/datagolf';
 import { parseTeamData, type ParsedTeam } from '../utils/teamParser';
 import { parseAmateurs } from '../utils/amateurParser';
 import { matchPlayersToTeams } from '../utils/nameMatcher';
@@ -39,6 +39,7 @@ export default function SetupWizard() {
   );
   const [fetchError, setFetchError] = useState('');
   const [playerCount, setPlayerCount] = useState(players.length);
+  const [fetchedEventName, setFetchedEventName] = useState('');
 
   // Step 2
   const [teamText, setTeamText] = useState('');
@@ -80,8 +81,28 @@ export default function SetupWizard() {
       const result = await fetchPredictions();
       setPlayers(result.players);
       setPlayerCount(result.players.length);
+      setFetchedEventName(result.eventName);
       setFetchStatus('success');
       markCompleted(1);
+
+      // Fetch and merge skill ratings (best-effort — don't fail if unavailable)
+      try {
+        const skillMap = await fetchSkillRatings();
+        const enriched = result.players.map((p) => {
+          const sr = p.dgId != null ? skillMap.get(p.dgId) : undefined;
+          if (!sr) return p;
+          return {
+            ...p,
+            sgOtt: sr.sg_ott,
+            sgApp: sr.sg_app,
+            sgAtg: sr.sg_arg,
+            sgPutt: sr.sg_putt,
+          };
+        });
+        setPlayers(enriched);
+      } catch {
+        // Skill ratings are optional — silently ignore failures
+      }
     } catch (err) {
       setFetchStatus('error');
       if (err instanceof DataGolfError) {
@@ -249,6 +270,18 @@ export default function SetupWizard() {
                   </svg>
                   <span className="text-sm font-medium">{playerCount} players loaded</span>
                 </div>
+
+                {fetchedEventName && !fetchedEventName.toLowerCase().includes('master') && (
+                  <div className="flex items-start gap-2 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                    <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                    </svg>
+                    <div className="text-sm">
+                      <p className="font-semibold">Showing {fetchedEventName} field</p>
+                      <p className="mt-0.5 text-amber-700">Masters predictions aren't published yet. Check back after the Valero Texas Open concludes (est. April 6–7).</p>
+                    </div>
+                  </div>
+                )}
 
                 <PlayerEVTable players={players} />
 
