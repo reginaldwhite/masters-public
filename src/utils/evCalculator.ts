@@ -266,7 +266,7 @@ export function calculateAllTeamEVs(
 
 export function calculateFieldSummary(
   teams: Team[],
-  payoutConfig: PayoutConfig,
+  _payoutConfig: PayoutConfig,
 ): FieldSummary {
   if (teams.length === 0) {
     return {

@@ -1,6 +1,5 @@
 import { useAtom } from 'jotai';
 import { viewAtom } from './atoms';
-import type { View } from './atoms';
 import DashboardHeader from './components/DashboardHeader';
 import TeamList from './components/TeamList';
 import SetupWizard from './components/SetupWizard';

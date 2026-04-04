@@ -8,11 +8,12 @@
 - [x] Task-004: EV Calculator Engine (commit: 4ac4762)
 - [x] Task-005: Auction Dashboard UI (commit: 17fa7fd)
 - [x] Task-006: Fame Premium & Adjustments (commit: 8741f2b)
+- [x] Task-007: Settings & Import Flow (commit: 3c44c21)
 
 ## Current Iteration
 
-- Iteration: 6
-- Working on: Task-007
+- Iteration: 7
+- Working on: Task-008
 - Started: 2026-04-03
 
 ## Blockers

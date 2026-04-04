@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useAtom, useSetAtom, useAtomValue } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 import {
   apiKeyAtom,
   playersAtom,
@@ -15,7 +15,7 @@ import { parseTeamData, type ParsedTeam } from '../utils/teamParser';
 import { parseAmateurs } from '../utils/amateurParser';
 import { parseFamePremiums } from '../utils/famePremiumParser';
 import { matchPlayersToTeams } from '../utils/nameMatcher';
-import type { Player, FamePremium } from '../types';
+import type { FamePremium } from '../types';
 import StepIndicator from './StepIndicator';
 
 type FetchStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -30,7 +30,6 @@ export default function SetupWizard() {
   const setView = useSetAtom(viewAtom);
   const setAuction = useSetAtom(auctionAtom);
   const setOnTheBlock = useSetAtom(onTheBlockAtom);
-  const existingTeams = useAtomValue(teamsAtom);
 
   // ── Wizard local state ───────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState(1);
