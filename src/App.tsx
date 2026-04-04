@@ -17,7 +17,7 @@ function App() {
         <button
           type="button"
           onClick={() => setView('dashboard')}
-          className={`flex-1 py-2.5 text-sm font-semibold text-center transition-colors ${
+          className={`flex-1 py-3.5 text-base font-semibold text-center transition-colors ${
             view === 'dashboard'
               ? 'bg-[#006747] text-white'
               : 'text-green-300 active:bg-[#006747]/50'
@@ -28,7 +28,7 @@ function App() {
         <button
           type="button"
           onClick={() => setView('setup')}
-          className={`flex-1 py-2.5 text-sm font-semibold text-center transition-colors ${
+          className={`flex-1 py-3.5 text-base font-semibold text-center transition-colors ${
             view === 'setup'
               ? 'bg-[#006747] text-white'
               : 'text-green-300 active:bg-[#006747]/50'

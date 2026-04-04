@@ -1,12 +1,14 @@
-import type { Team, AuctionEntry } from '../types';
+import type { Team, AuctionEntry, FamePremium } from '../types';
 import { formatDollars, formatPercent } from '../utils/format';
 import ValueBadge from './ValueBadge';
+import { getTeamFamePremium } from '../utils/priceCalculator';
 
 interface TeamCardProps {
   team: Team;
   auctionEntry?: AuctionEntry;
   isOnTheBlock: boolean;
   pool: number;
+  famePremiums: FamePremium[];
   onSelect: (groupId: number) => void;
 }
 
@@ -15,10 +17,12 @@ export default function TeamCard({
   auctionEntry,
   isOnTheBlock,
   pool,
+  famePremiums,
   onSelect,
 }: TeamCardProps) {
   const isSold = !!auctionEntry;
   const evDollars = pool > 0 ? team.ev * pool : 0;
+  const hasFamePremium = getTeamFamePremium(team, famePremiums) > 1.0;
 
   let cardBg = 'bg-white';
   let borderStyle = 'border border-gray-200';
@@ -42,11 +46,12 @@ export default function TeamCard({
         <div className="flex-1 min-w-0">
           <div className="text-xs font-semibold uppercase tracking-wider text-[#006747] mb-1">
             Group {team.groupId}
+            {hasFamePremium && <span className="ml-1" title="Fame premium">🔥</span>}
           </div>
           <div className="space-y-0.5">
             {team.players.map((player) => (
               <div key={player.name} className="leading-tight">
-                <span className="text-[15px] text-[#1a1a1a]">
+                <span className="text-base text-[#1a1a1a]">
                   {player.isSenior && <span className="mr-1">★</span>}
                   {player.isAmateur && <span className="mr-1">🅰</span>}
                   {player.name}

@@ -6,11 +6,12 @@
 - [x] Task-002: DataGolf API Service (commit: 9886662)
 - [x] Task-003: Team Data Parser (commit: 587ba42)
 - [x] Task-004: EV Calculator Engine (commit: 4ac4762)
+- [x] Task-005: Auction Dashboard UI (commit: 17fa7fd)
 
 ## Current Iteration
 
-- Iteration: 4
-- Working on: Task-005
+- Iteration: 5
+- Working on: Task-006
 - Started: 2026-04-03
 
 ## Blockers

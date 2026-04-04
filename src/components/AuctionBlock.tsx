@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useAtomValue } from 'jotai';
 import type { Team } from '../types';
-import { payoutConfigAtom, playersAtom, poolAtom } from '../atoms';
+import { payoutConfigAtom, playersAtom, poolAtom, famePremiumsAtom, teamsSoldCountAtom, teamsAtom } from '../atoms';
 import { calculatePlayerEV, calculateLowSeniorEV, calculateLowAmEV, calculateHighScoreEV } from '../utils/evCalculator';
 import { formatDollars, formatPercent } from '../utils/format';
+import { getTeamFamePremium, getAuctionPositionFactor, calculateExpectedPrice } from '../utils/priceCalculator';
 
 interface AuctionBlockProps {
   team: Team;
@@ -16,8 +17,14 @@ export default function AuctionBlock({ team, onSold, onCancel }: AuctionBlockPro
   const pool = useAtomValue(poolAtom);
   const payoutConfig = useAtomValue(payoutConfigAtom);
   const allPlayers = useAtomValue(playersAtom);
+  const famePremiums = useAtomValue(famePremiumsAtom);
+  const teamsSold = useAtomValue(teamsSoldCountAtom);
+  const allTeams = useAtomValue(teamsAtom);
 
   const evDollars = pool > 0 ? team.ev * pool : 0;
+  const famePremium = getTeamFamePremium(team, famePremiums);
+  const positionFactor = getAuctionPositionFactor(teamsSold, allTeams.length);
+  const expectedPrice = pool > 0 ? calculateExpectedPrice(evDollars, famePremium, positionFactor) : 0;
 
   const handleSold = () => {
     const price = parseInt(priceInput.replace(/,/g, ''), 10);
@@ -51,7 +58,7 @@ export default function AuctionBlock({ team, onSold, onCancel }: AuctionBlockPro
               className="flex items-center justify-between bg-white rounded-lg px-3 py-2"
             >
               <div>
-                <div className="text-[15px] font-medium text-[#1a1a1a]">
+                <div className="text-base font-medium text-[#1a1a1a]">
                   {player.isSenior && <span className="mr-1">★</span>}
                   {player.isAmateur && <span className="mr-1">🅰</span>}
                   {player.name}
@@ -77,25 +84,42 @@ export default function AuctionBlock({ team, onSold, onCancel }: AuctionBlockPro
         })}
       </div>
 
-      {/* Team Total EV */}
+      {/* Suggested Max Bid — what YOU should pay */}
       <div className="bg-[#006747] text-white rounded-xl px-4 py-3 text-center">
         <div className="text-xs uppercase tracking-wider text-green-200">
-          Team Total EV
+          Suggested Max Bid
         </div>
         <div className="text-2xl font-bold text-[#FFD700]">
-          {formatPercent(team.ev)}
+          {pool > 0 ? formatDollars(evDollars) : formatPercent(team.ev)}
         </div>
-        {pool > 0 && (
-          <div className="text-base font-semibold">
-            {formatDollars(evDollars)}
-          </div>
-        )}
-        {pool > 0 && (
-          <div className="mt-1 text-xs text-green-200">
-            Suggested max bid: {formatDollars(evDollars)}
-          </div>
-        )}
+        <div className="text-xs text-green-200 mt-0.5">
+          Team EV: {formatPercent(team.ev)}{pool > 0 ? ` = ${formatDollars(evDollars)}` : ''}
+        </div>
       </div>
+
+      {/* Expected Price — what OTHERS will pay */}
+      {pool > 0 && (
+        <div className="bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-center">
+          <div className="text-xs uppercase tracking-wider text-gray-500">
+            Expected Price
+          </div>
+          <div className="text-xl font-bold text-gray-700">
+            {formatDollars(expectedPrice)}
+          </div>
+          <div className="flex items-center justify-center gap-3 mt-1 text-xs text-gray-500">
+            {famePremium > 1.0 && (
+              <span className="inline-flex items-center gap-0.5 bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full font-medium">
+                🔥 Fame: {famePremium.toFixed(2)}×
+              </span>
+            )}
+            {positionFactor > 1.0 && (
+              <span className="inline-flex items-center gap-0.5 bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">
+                📈 Late Auction: {positionFactor.toFixed(2)}×
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Price Input */}
       <div className="space-y-2">
@@ -130,7 +154,7 @@ export default function AuctionBlock({ team, onSold, onCancel }: AuctionBlockPro
         <button
           type="button"
           onClick={onCancel}
-          className="py-3 rounded-xl border-2 border-gray-300 text-gray-600 font-semibold text-base active:bg-gray-100 transition-colors"
+          className="py-3.5 rounded-xl border-2 border-gray-300 text-gray-600 font-semibold text-base active:bg-gray-100 transition-colors"
         >
           Cancel
         </button>
@@ -138,7 +162,7 @@ export default function AuctionBlock({ team, onSold, onCancel }: AuctionBlockPro
           type="button"
           onClick={handleSold}
           disabled={!priceInput || parseInt(priceInput.replace(/,/g, ''), 10) <= 0}
-          className="py-3 rounded-xl bg-[#006747] text-white font-bold text-base active:bg-[#005238] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="py-3.5 rounded-xl bg-[#006747] text-white font-bold text-base active:bg-[#005238] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           SOLD ✓
         </button>
