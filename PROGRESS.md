@@ -14,15 +14,15 @@
 ## Phase 2 — Enhancement Tasks
 
 - [x] Task-009: Environment Variable for API Key (commit: 9d72683)
-- [ ] Task-010: Exact Position Probabilities via add_position
-- [ ] Task-011: Auto-Calculated Fame Premium from Career Wins
+- [x] Task-010: Exact Position Probabilities via add_position (commit: ddc165a)
+- [x] Task-011: Auto-Calculated Fame Premium from Career Wins (commit: 0650bbf)
 - [ ] Task-012: Restructured Setup Flow
 - [ ] Task-013: Final Integration Test & Cleanup
 
 ## Current Iteration
 
-- Iteration: 10
-- Working on: Task-010
+- Iteration: 12
+- Working on: Task-012
 - Started: 2026-04-04
 
 ## Blockers

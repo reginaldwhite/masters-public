@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import {
   playersAtom,
@@ -12,10 +12,10 @@ import {
 import { fetchPredictions, DataGolfError } from '../services/datagolf';
 import { parseTeamData, type ParsedTeam } from '../utils/teamParser';
 import { parseAmateurs } from '../utils/amateurParser';
-import { parseFamePremiums } from '../utils/famePremiumParser';
 import { matchPlayersToTeams } from '../utils/nameMatcher';
-import type { FamePremium } from '../types';
+import { calculateFamePremiums } from '../utils/fameCalculator';
 import StepIndicator from './StepIndicator';
+import PlayerEVTable from './PlayerEVTable';
 
 type FetchStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -50,9 +50,8 @@ export default function SetupWizard() {
   const [amateurText, setAmateurText] = useState('');
   const [parsedAmateurs, setParsedAmateurs] = useState<string[]>([]);
 
-  // Step 4
-  const [fameText, setFameText] = useState('');
-  const [parsedFame, setParsedFame] = useState<FamePremium[]>([]);
+  // Step 4 (Review) — fame premiums are auto-calculated
+  const [showFameDetails, setShowFameDetails] = useState(false);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -73,7 +72,7 @@ export default function SetupWizard() {
 
   // ── Step 1: Fetch players ────────────────────────────────────────────────
 
-  const handleFetchPlayers = async () => {
+  const handleFetchPlayers = useCallback(async () => {
     setFetchStatus('loading');
     setFetchError('');
 
@@ -83,8 +82,6 @@ export default function SetupWizard() {
       setPlayerCount(result.players.length);
       setFetchStatus('success');
       markCompleted(1);
-      // Auto-advance
-      setTimeout(() => setCurrentStep(2), 600);
     } catch (err) {
       setFetchStatus('error');
       if (err instanceof DataGolfError) {
@@ -97,7 +94,16 @@ export default function SetupWizard() {
         setFetchError('Network error. Please check your connection.');
       }
     }
-  };
+  }, [setPlayers, markCompleted]);
+
+  // Auto-fetch on mount
+  useEffect(() => {
+    if (players.length === 0 && fetchStatus === 'idle') {
+      handleFetchPlayers();
+    } else if (players.length > 0) {
+      markCompleted(1);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Step 2: Parse teams ──────────────────────────────────────────────────
 
@@ -137,22 +143,7 @@ export default function SetupWizard() {
     setCurrentStep(4);
   };
 
-  // ── Step 4: Fame Premiums ────────────────────────────────────────────────
-
-  const handleSaveFame = () => {
-    const premiums = parseFamePremiums(fameText);
-    setParsedFame(premiums);
-    markCompleted(4);
-    setCurrentStep(5);
-  };
-
-  const handleSkipFame = () => {
-    setParsedFame([]);
-    markCompleted(4);
-    setCurrentStep(5);
-  };
-
-  // ── Step 5: Finalize ─────────────────────────────────────────────────────
+  // ── Step 4: Review & Confirm ─────────────────────────────────────────────
 
   const getUnmatchedPlayers = (): string[] => {
     if (parsedTeams.length === 0 || players.length === 0) return [];
@@ -173,13 +164,21 @@ export default function SetupWizard() {
     0,
   );
 
+  // Auto-calculate fame premiums from player data
+  const autoFamePremiums = players.length > 0 ? calculateFamePremiums(players) : [];
+  const famePremiumsWithBoost = autoFamePremiums
+    .filter((fp) => fp.multiplier > 1.0)
+    .sort((a, b) => b.multiplier - a.multiplier);
+
   const handleGoToDashboard = () => {
     // 1. Build teams with matched data
     const teams = matchPlayersToTeams(parsedTeams, players, parsedAmateurs);
-    // 2. Store in atoms
+    // 2. Calculate fame premiums
+    const premiums = calculateFamePremiums(players);
+    // 3. Store in atoms
     setTeams(teams);
-    setFamePremiums(parsedFame);
-    // 3. Switch to dashboard
+    setFamePremiums(premiums);
+    // 4. Switch to dashboard
     setView('dashboard');
   };
 
@@ -200,8 +199,7 @@ export default function SetupWizard() {
     setTotalTeamPlayers(0);
     setAmateurText('');
     setParsedAmateurs([]);
-    setFameText('');
-    setParsedFame([]);
+    setShowFameDetails(false);
     setCurrentStep(1);
     setCompletedSteps(new Set());
   };
@@ -218,43 +216,50 @@ export default function SetupWizard() {
 
       <div className="px-4">
         {currentStep === 1 && (
-          <StepCard title="Step 1" subtitle="Fetch Players">
-            <p className="text-sm text-gray-600 mb-4">
-              Fetch player predictions from DataGolf.
-            </p>
-
-            <button
-              type="button"
-              onClick={handleFetchPlayers}
-              disabled={fetchStatus === 'loading'}
-              className="w-full bg-[#006747] text-white font-semibold rounded-lg
-                         py-3 text-base transition-all active:scale-[0.98]
-                         disabled:opacity-50 disabled:cursor-not-allowed
-                         flex items-center justify-center gap-2 min-h-[48px]"
-            >
-              {fetchStatus === 'loading' ? (
-                <>
-                  <Spinner />
-                  Fetching…
-                </>
-              ) : (
-                'Fetch Players'
-              )}
-            </button>
-
-            {fetchStatus === 'success' && (
-              <div className="mt-3 flex items-center gap-2 text-green-700 bg-green-50 rounded-lg px-4 py-3">
-                <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                <span className="text-sm font-medium">{playerCount} players loaded</span>
+          <StepCard title="Step 1" subtitle="Players & EV Preview">
+            {fetchStatus === 'loading' && (
+              <div className="flex items-center justify-center gap-3 py-8">
+                <Spinner />
+                <span className="text-sm text-gray-600">Fetching player data from DataGolf...</span>
               </div>
             )}
 
             {fetchStatus === 'error' && (
-              <div className="mt-3 flex items-center gap-2 text-red-700 bg-red-50 rounded-lg px-4 py-3">
-                <span className="text-base">⚠️</span>
-                <span className="text-sm font-medium">{fetchError}</span>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-red-700 bg-red-50 rounded-lg px-4 py-3">
+                  <span className="text-base">⚠️</span>
+                  <span className="text-sm font-medium">{fetchError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleFetchPlayers}
+                  className="w-full bg-[#006747] text-white font-semibold rounded-lg
+                             py-3 text-base transition-all active:scale-[0.98] min-h-[48px]"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {fetchStatus === 'success' && players.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-green-700 bg-green-50 rounded-lg px-4 py-3">
+                  <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm font-medium">{playerCount} players loaded</span>
+                </div>
+
+                <PlayerEVTable players={players} />
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(2)}
+                  className="w-full bg-[#006747] text-white font-semibold rounded-lg
+                             py-3 text-base transition-all active:scale-[0.98] min-h-[48px]"
+                >
+                  Create Teams →
+                </button>
               </div>
             )}
           </StepCard>
@@ -406,64 +411,7 @@ export default function SetupWizard() {
         )}
 
         {currentStep === 4 && (
-          <StepCard title="Step 4" subtitle="Fame Premiums" optional>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Premium Multipliers
-            </label>
-            <textarea
-              value={fameText}
-              onChange={(e) => setFameText(e.target.value)}
-              placeholder="Player Name: 1.15"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm
-                         font-mono leading-relaxed resize-y
-                         focus:outline-none focus:ring-2 focus:ring-[#006747]/40 focus:border-[#006747]"
-              style={{ minHeight: '120px' }}
-            />
-
-            {parsedFame.length > 0 && (
-              <div className="mt-3 bg-gray-50 rounded-lg px-4 py-3 max-h-40 overflow-y-auto">
-                <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                  Parsed Premiums
-                </div>
-                {parsedFame.map((fp) => (
-                  <div
-                    key={fp.playerName}
-                    className="flex justify-between text-xs py-0.5"
-                  >
-                    <span className="text-gray-700">{fp.playerName}</span>
-                    <span className="font-mono text-[#006747] font-semibold">
-                      {fp.multiplier.toFixed(2)}×
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-4 flex gap-3">
-              <button
-                type="button"
-                onClick={handleSkipFame}
-                className="flex-1 border border-gray-300 text-gray-600 font-semibold rounded-lg
-                           py-3 text-base transition-all active:scale-[0.98] min-h-[48px]"
-              >
-                Skip
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveFame}
-                disabled={!fameText.trim()}
-                className="flex-1 bg-[#006747] text-white font-semibold rounded-lg
-                           py-3 text-base transition-all active:scale-[0.98]
-                           disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px]"
-              >
-                Save
-              </button>
-            </div>
-          </StepCard>
-        )}
-
-        {currentStep === 5 && (
-          <StepCard title="Step 5" subtitle="Review & Confirm">
+          <StepCard title="Step 4" subtitle="Review & Confirm">
             <div className="space-y-3">
               <SummaryRow
                 label="Players loaded"
@@ -487,9 +435,48 @@ export default function SetupWizard() {
               />
               <SummaryRow
                 label="Fame premiums"
-                value={`${parsedFame.length} players`}
+                value={`${famePremiumsWithBoost.length} players (auto)`}
                 ok
               />
+
+              {/* Collapsible fame premium details */}
+              {famePremiumsWithBoost.length > 0 && (
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowFameDetails((v) => !v)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-sm
+                               font-medium text-gray-700 bg-gray-50 hover:bg-gray-100
+                               transition-colors min-h-[44px]"
+                  >
+                    <span>Fame Premium Details</span>
+                    <svg
+                      className={`w-4 h-4 text-gray-400 transition-transform ${showFameDetails ? 'rotate-180' : ''}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {showFameDetails && (
+                    <div className="px-4 py-3 max-h-48 overflow-y-auto">
+                      {famePremiumsWithBoost.map((fp) => (
+                        <div
+                          key={fp.playerName}
+                          className="flex justify-between text-xs py-0.5"
+                        >
+                          <span className="text-gray-700">{fp.playerName}</span>
+                          <span className="font-mono text-[#006747] font-semibold">
+                            {fp.multiplier.toFixed(2)}×
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Unmatched players */}
               {(() => {

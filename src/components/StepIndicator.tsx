@@ -1,4 +1,4 @@
-const STEP_LABELS = ['API Key', 'Teams', 'Amateurs', 'Fame', 'Review'];
+const STEP_LABELS = ['Players', 'Teams', 'Amateurs', 'Review'];
 
 interface StepIndicatorProps {
   currentStep: number;
