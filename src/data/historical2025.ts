@@ -1,0 +1,16 @@
+export const payouts2025: Record<string, { payout: number; finish: string }> = {
+  'Rory McIlroy': { payout: 6650, finish: '1st' },
+  'Justin Rose': { payout: 3724, finish: '2nd' },
+  'Patrick Reed': { payout: 3192, finish: '3rd' },
+  'Scottie Scheffler': { payout: 2660, finish: '4th' },
+  'Sungjae Im': { payout: 2261, finish: 'T5' },
+  'Bryson DeChambeau': { payout: 2261, finish: 'T5' },
+  'Ludvig Aberg': { payout: 1862, finish: '7th' },
+  'Xander Schauffele': { payout: 599, finish: 'T8' },
+  'Dustin Johnson': { payout: 599, finish: 'T8' },
+  'Jason Day': { payout: 599, finish: 'T8' },
+  'Corey Conners': { payout: 599, finish: 'T8' },
+  'Bernhard Langer': { payout: 532, finish: 'Low Senior' },
+  'Nick Dunlap': { payout: 532, finish: 'High Score' },
+  'Justin Hastings': { payout: 532, finish: 'Low Am' },
+};

@@ -1,0 +1,31 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Sensitive files
+datagolf api key
+
+# Reference HTML files
+*.html
+
+# Editor
+.DS_Store
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+
+# Screenshots
+*.png
