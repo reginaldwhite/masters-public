@@ -9,7 +9,14 @@ export interface DGPlayerRaw {
   make_cut: number;
   player_name: string; // "Last, First"
   sample_size: number;
+  top_2?: number;  // from add_position
+  top_3?: number;  // from add_position
+  top_4?: number;  // from add_position
   top_5: number;
+  top_6?: number;  // from add_position
+  top_7?: number;  // from add_position
+  top_8?: number;  // from add_position
+  top_9?: number;  // from add_position
   top_10: number;
   top_20: number;
   win: number;
@@ -40,20 +47,21 @@ export function normalizeName(dgName: string): string {
 
 /**
  * Map a raw DataGolf player object to the app's Player type.
- * Intermediate positions (top2–top4, top6–top9) are set to 0;
- * interpolation is handled by the EV calculator.
+ * When add_position data is available the intermediate cumulative
+ * probabilities (top2–top4, top6–top9) are populated directly.
+ * Otherwise they stay 0 and the EV calculator falls back to interpolation.
  */
 export function mapDGPlayerToPlayer(raw: DGPlayerRaw): Player {
   const probabilities: PositionProbabilities = {
     win: raw.win ?? 0,
-    top2: 0,
-    top3: 0,
-    top4: 0,
+    top2: raw.top_2 ?? 0,
+    top3: raw.top_3 ?? 0,
+    top4: raw.top_4 ?? 0,
     top5: raw.top_5 ?? 0,
-    top6: 0,
-    top7: 0,
-    top8: 0,
-    top9: 0,
+    top6: raw.top_6 ?? 0,
+    top7: raw.top_7 ?? 0,
+    top8: raw.top_8 ?? 0,
+    top9: raw.top_9 ?? 0,
     top10: raw.top_10 ?? 0,
     makeCut: raw.make_cut ?? 0,
   };
@@ -110,7 +118,7 @@ export async function fetchPredictions({
     throw new DataGolfError('API key is required');
   }
 
-  const url = `${PROXY_BASE}/preds/pre-tournament?tour=pga&file_format=json&key=${encodeURIComponent(apiKey)}`;
+  const url = `${PROXY_BASE}/preds/pre-tournament?tour=pga&add_position=2,3,4,6,7,8,9&file_format=json&key=${encodeURIComponent(apiKey)}`;
 
   let response: Response;
   try {

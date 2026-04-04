@@ -338,6 +338,185 @@ npx serve dist
 # Access from phone browser, complete full workflow
 ```
 
+---
+
+## Enhancement Tasks (Phase 2)
+
+### Task-009: Environment Variable for API Key
+
+**Priority**: High
+**Estimated Iterations**: 1
+**Dependencies**: None
+
+Move the DataGolf API key from runtime input to a build-time `.env` file. This simplifies the setup flow and removes a manual step.
+
+**Acceptance Criteria**:
+
+- [ ] `.env` file created at project root with `VITE_DATAGOLF_API_KEY=your-datagolf-api-key`
+- [ ] `.env` is already in `.gitignore` (verify)
+- [ ] `src/services/datagolf.ts`: `fetchPredictions` reads key from `import.meta.env.VITE_DATAGOLF_API_KEY` instead of taking `apiKey` parameter
+- [ ] `FetchPredictionsOptions` interface updated — `apiKey` field removed
+- [ ] Remove or deprecate `apiKeyAtom` from `src/atoms/index.ts`
+- [ ] All callers of `fetchPredictions` updated (SetupWizard, tests)
+- [ ] Tests updated: mock `import.meta.env` instead of passing apiKey
+- [ ] `DataGolfError` still thrown if env var is missing/empty
+- [ ] TypeScript compiles clean (`npx tsc --noEmit`)
+- [ ] All tests pass (`npx vitest run`)
+
+**Verification**:
+
+```bash
+npx tsc --noEmit
+npx vitest run
+```
+
+### Task-010: Exact Position Probabilities via add_position
+
+**Priority**: High
+**Estimated Iterations**: 1-2
+**Dependencies**: Task-009
+
+Use the DataGolf API's `add_position` parameter to fetch exact probabilities for positions 2-9, eliminating the need for decay-weighted interpolation.
+
+**API Change**:
+```
+GET /preds/pre-tournament?tour=pga&add_position=2,3,4,6,7,8,9&file_format=json&key=...
+```
+
+This returns `top_2`, `top_3`, `top_4`, `top_6`, `top_7`, `top_8`, `top_9` fields alongside the default `win`, `top_5`, `top_10`, `top_20`, `make_cut`.
+
+**Acceptance Criteria**:
+
+- [ ] `fetchPredictions` URL includes `&add_position=2,3,4,6,7,8,9`
+- [ ] `DGPlayerRaw` interface updated with optional `top_2`, `top_3`, `top_4`, `top_6`, `top_7`, `top_8`, `top_9` fields
+- [ ] `mapDGPlayerToPlayer` maps these new fields to `PositionProbabilities` (falling back to 0 if absent)
+- [ ] EV calculator's `deriveMarginalProbabilities` still works correctly — when exact cumulative values are provided, interpolation is effectively bypassed (exact values used directly)
+- [ ] Existing tests updated for new data shape
+- [ ] New test: verify that when exact positions are provided, marginal probs = topN - top(N-1) without interpolation artifacts
+- [ ] TypeScript compiles clean
+- [ ] All tests pass
+
+**Verification**:
+
+```bash
+npx tsc --noEmit
+npx vitest run
+```
+
+### Task-011: Auto-Calculated Fame Premium from Career Wins
+
+**Priority**: High
+**Estimated Iterations**: 2
+**Dependencies**: None
+
+Replace the manual "paste fame premiums" step with an automatic system based on career wins data. Formula: `fame_score = 3 × major_wins + 1 × all_pro_wins`. Normalized to a multiplier.
+
+**Data Source**: Static lookup table in `src/data/careerWins.ts` — manually populated with career win counts for all expected 2026 Masters field players (~87 players).
+
+**"All pro wins"** includes: PGA Tour, DP World Tour, LIV Golf, Japan Tour, and other recognized professional tours. Majors are counted in both the 3× and 1× buckets (intentional double-counting to heavily weight major winners).
+
+**Multiplier Formula** (normalized):
+```
+fame_score = 3 × major_wins + all_pro_wins
+max_score = max(fame_score) across all players in field
+fame_multiplier = 1 + (fame_score / max_score) × 0.30
+```
+
+Range: 1.00 (unknown/no wins) to 1.30 (highest fame score, e.g. Tiger Woods).
+
+**Acceptance Criteria**:
+
+- [ ] `src/data/careerWins.ts` created with `{ playerName, majorWins, proWins }` for all expected 2026 Masters field players
+- [ ] `src/utils/fameCalculator.ts` created with:
+  - `calculateFameScore(majorWins, proWins): number`
+  - `calculateFamePremiums(players, careerWinsData): FamePremium[]`
+- [ ] Fame premiums auto-calculated when players are loaded (no manual input needed)
+- [ ] `famePremiumsAtom` populated automatically after fetch
+- [ ] Manual fame premium textarea and parser removed from SetupWizard (Step 4 eliminated)
+- [ ] Unit tests for fameCalculator with known player data
+- [ ] TypeScript compiles clean
+- [ ] All tests pass
+
+**Verification**:
+
+```bash
+npx tsc --noEmit
+npx vitest run
+# Manual: load app, verify fame premiums auto-populated, Tiger ≈1.30, unknowns = 1.00
+```
+
+### Task-012: Restructured Setup Flow
+
+**Priority**: High
+**Estimated Iterations**: 2-3
+**Dependencies**: Task-009, Task-010, Task-011
+
+Restructure the setup wizard from 5 steps to 4 steps, with Step 1 auto-fetching data and showing an EV preview table.
+
+**New Setup Flow**:
+1. **Players & EV Preview** — Auto-fetch DataGolf data on mount (API key from `.env`). Display scrollable table of all players sorted by EV (highest first) with simple name search/filter. Show "Create Teams" button at bottom.
+2. **Paste Teams** — Same as current Step 2 (paste multi-column team data, parse, match preview).
+3. **Amateurs** — Same as current Step 3 (paste amateur names, optional).
+4. **Review & Confirm** — Summary of all data, unmatched players warning, "Go to Dashboard" button. Fame premiums shown as auto-calculated (read-only display).
+
+**Player EV Preview Table (Step 1)**:
+- Scrollable list of all ~87 players
+- Columns: Rank, Player Name, Win %, EV (% of pool)
+- Sorted by EV descending
+- Simple text search/filter input at top (filters by player name, instant)
+- Loading spinner during fetch, error state if fetch fails
+- "Create Teams →" button at bottom (enabled after successful fetch)
+
+**Acceptance Criteria**:
+
+- [ ] `StepIndicator` updated: 4 steps with labels ["Players", "Teams", "Amateurs", "Review"]
+- [ ] Step 1 auto-fetches on mount (no API key input needed)
+- [ ] Step 1 shows player EV table sorted by EV desc with search filter
+- [ ] Step 1 has "Create Teams" button to advance to Step 2
+- [ ] Step 4 (Review) shows auto-calculated fame premiums as read-only
+- [ ] Old Step 1 (API key input) removed
+- [ ] Old Step 4 (manual fame premiums) removed
+- [ ] All navigation still works (step indicator, back/forward)
+- [ ] Mobile-optimized (table scrolls, search input has proper tap target)
+- [ ] `apiKeyAtom` references fully removed from SetupWizard
+- [ ] TypeScript compiles clean
+- [ ] All tests pass
+
+**Verification**:
+
+```bash
+npx tsc --noEmit
+npx vitest run
+# Manual: fresh load → auto-fetches → player table visible → search works → create teams → full flow
+```
+
+### Task-013: Final Integration Test & Cleanup
+
+**Priority**: Medium
+**Estimated Iterations**: 1
+**Dependencies**: Task-009, Task-010, Task-011, Task-012
+
+Final pass to ensure everything works end-to-end.
+
+**Acceptance Criteria**:
+
+- [ ] `npx tsc --noEmit` — zero errors
+- [ ] `npx vitest run` — all tests pass
+- [ ] `npm run build` — clean build, no warnings
+- [ ] Remove dead code: `famePremiumParser.ts` (if no longer imported), old API key input references
+- [ ] Verify `.env` not included in `dist/` build output
+- [ ] Verify API key not visible in built JS bundles
+- [ ] Git commit all changes with clear message
+
+**Verification**:
+
+```bash
+npx tsc --noEmit
+npx vitest run
+npm run build
+grep -r "0304522e" dist/ || echo "API key not in build output ✓"
+```
+
 ## Out of Scope
 
 - Database or persistent storage (session-only)

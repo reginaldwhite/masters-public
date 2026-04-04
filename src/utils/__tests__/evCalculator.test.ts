@@ -149,6 +149,39 @@ describe('deriveMarginalProbabilities', () => {
     expect(total).toBeCloseTo(0.55);
     expect(total).toBeLessThanOrEqual(probs.top10 + 1e-10);
   });
+
+  it('uses exact position probabilities when all are provided (no interpolation)', () => {
+    const probs = makeProbs({
+      win: 0.15,
+      top2: 0.22,
+      top3: 0.27,
+      top4: 0.31,
+      top5: 0.35,
+      top6: 0.39,
+      top7: 0.42,
+      top8: 0.45,
+      top9: 0.48,
+      top10: 0.50,
+    });
+    const m = deriveMarginalProbabilities(probs);
+
+    // Exact marginals from cumulative subtraction
+    expect(m.p1).toBeCloseTo(0.15);
+    expect(m.p2).toBeCloseTo(0.07); // 0.22 - 0.15
+    expect(m.p3).toBeCloseTo(0.05); // 0.27 - 0.22
+    expect(m.p4).toBeCloseTo(0.04); // 0.31 - 0.27
+    expect(m.p5).toBeCloseTo(0.04); // 0.35 - 0.31
+    expect(m.p6).toBeCloseTo(0.04); // 0.39 - 0.35
+    expect(m.p7).toBeCloseTo(0.03); // 0.42 - 0.39
+    expect(m.p8).toBeCloseTo(0.03); // 0.45 - 0.42
+    expect(m.p9).toBeCloseTo(0.03); // 0.48 - 0.45
+    expect(m.p10).toBeCloseTo(0.02); // 0.50 - 0.48
+
+    // Total must equal top10
+    const total =
+      m.p1 + m.p2 + m.p3 + m.p4 + m.p5 + m.p6 + m.p7 + m.p8 + m.p9 + m.p10;
+    expect(total).toBeCloseTo(0.50);
+  });
 });
 
 // ── 2. Player EV tests ──────────────────────────────────────────────────────

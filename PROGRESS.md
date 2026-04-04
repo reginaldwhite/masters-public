@@ -1,6 +1,6 @@
 # Progress Log
 
-## Completed
+## Completed (Phase 1)
 
 - [x] Task-001: Project Setup (commit: fade5e2)
 - [x] Task-002: DataGolf API Service (commit: 9886662)
@@ -11,11 +11,19 @@
 - [x] Task-007: Settings & Import Flow (commit: 3c44c21)
 - [x] Task-008: Production Build & Deploy (commit: 48f359d)
 
+## Phase 2 — Enhancement Tasks
+
+- [x] Task-009: Environment Variable for API Key (commit: 9d72683)
+- [ ] Task-010: Exact Position Probabilities via add_position
+- [ ] Task-011: Auto-Calculated Fame Premium from Career Wins
+- [ ] Task-012: Restructured Setup Flow
+- [ ] Task-013: Final Integration Test & Cleanup
+
 ## Current Iteration
 
-- Iteration: 8
-- Working on: ALL TASKS COMPLETE
-- Completed: 2026-04-04
+- Iteration: 10
+- Working on: Task-010
+- Started: 2026-04-04
 
 ## Blockers
 
@@ -23,8 +31,7 @@
 
 ## Notes
 
-- Ralph loop initialized
-- PRD created: 2026-04-03
-- DataGolf API key obtained
-- 2025 calcutta data captured (32 teams, $26,600 pool)
-- Masters starts April 10, 2026 — auction likely weekend of April 4-5
+- Phase 1 complete with all 8 tasks done
+- Phase 2 adds: .env API key, exact position probs, auto fame premium, restructured setup
+- DataGolf API `add_position` parameter discovered — provides exact top_2..top_9 probabilities
+- Fame formula: fame_score = 3×major_wins + all_pro_wins, normalized to 1.00–1.30 multiplier

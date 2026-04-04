@@ -36,7 +36,14 @@ const sampleRaw: DGPlayerRaw = {
   make_cut: 0.95,
   player_name: 'Scheffler, Scottie',
   sample_size: 150,
+  top_2: 0.22,
+  top_3: 0.27,
+  top_4: 0.31,
   top_5: 0.35,
+  top_6: 0.39,
+  top_7: 0.42,
+  top_8: 0.45,
+  top_9: 0.48,
   top_10: 0.5,
   top_20: 0.7,
   win: 0.15,
@@ -63,8 +70,32 @@ describe('mapDGPlayerToPlayer', () => {
     expect(player.probabilities.makeCut).toBe(0.95);
   });
 
-  it('sets intermediate positions to 0', () => {
+  it('maps intermediate positions from add_position fields', () => {
     const player = mapDGPlayerToPlayer(sampleRaw);
+
+    expect(player.probabilities.top2).toBe(0.22);
+    expect(player.probabilities.top3).toBe(0.27);
+    expect(player.probabilities.top4).toBe(0.31);
+    expect(player.probabilities.top6).toBe(0.39);
+    expect(player.probabilities.top7).toBe(0.42);
+    expect(player.probabilities.top8).toBe(0.45);
+    expect(player.probabilities.top9).toBe(0.48);
+  });
+
+  it('defaults intermediate positions to 0 when add_position fields are absent', () => {
+    const rawWithout: DGPlayerRaw = {
+      am: 0,
+      country: 'USA',
+      dg_id: 99999,
+      make_cut: 0.80,
+      player_name: 'Doe, John',
+      sample_size: 100,
+      top_5: 0.30,
+      top_10: 0.45,
+      top_20: 0.60,
+      win: 0.10,
+    };
+    const player = mapDGPlayerToPlayer(rawWithout);
 
     expect(player.probabilities.top2).toBe(0);
     expect(player.probabilities.top3).toBe(0);
@@ -217,7 +248,7 @@ describe('fetchPredictions', () => {
     await fetchPredictions();
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      '/api/datagolf/preds/pre-tournament?tour=pga&file_format=json&key=my-key',
+      '/api/datagolf/preds/pre-tournament?tour=pga&add_position=2,3,4,6,7,8,9&file_format=json&key=my-key',
     );
   });
 });
