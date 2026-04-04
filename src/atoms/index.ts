@@ -1,5 +1,6 @@
 import { atom } from 'jotai';
 import type { Player, Team, AuctionEntry, PayoutConfig, FamePremium } from '../types';
+import { calculateAllTeamEVs } from '../utils/evCalculator';
 
 // API key for Data Golf
 export const apiKeyAtom = atom<string>('');
@@ -50,3 +51,40 @@ export const famePremiumsAtom = atom<FamePremium[]>([]);
 
 // List of amateur player names
 export const amateursAtom = atom<string[]>([]);
+
+// ── Dashboard-specific atoms ─────────────────────────────────────────────────
+
+// The groupId currently "on the block" (being auctioned)
+export const onTheBlockAtom = atom<number | null>(null);
+
+// Derived: teams with recalculated EVs based on current pool & payout config
+export const teamsWithEVAtom = atom<Team[]>((get) => {
+  const teams = get(teamsAtom);
+  const players = get(playersAtom);
+  const payoutConfig = get(payoutConfigAtom);
+  const pool = get(poolAtom);
+
+  if (teams.length === 0) return [];
+
+  return calculateAllTeamEVs(teams, players, payoutConfig, pool > 0 ? pool : undefined);
+});
+
+// Derived: teams that have NOT been sold
+export const unsoldTeamsAtom = atom<Team[]>((get) => {
+  const teams = get(teamsWithEVAtom);
+  const auction = get(auctionAtom);
+  return teams.filter((t) => !auction.has(t.groupId));
+});
+
+// Derived: teams that HAVE been sold, with auction info
+export const soldTeamsAtom = atom<Team[]>((get) => {
+  const teams = get(teamsWithEVAtom);
+  const auction = get(auctionAtom);
+  return teams.filter((t) => auction.has(t.groupId));
+});
+
+// Derived: count of sold teams
+export const teamsSoldCountAtom = atom<number>((get) => {
+  const auction = get(auctionAtom);
+  return auction.size;
+});

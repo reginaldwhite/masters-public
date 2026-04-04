@@ -4,11 +4,13 @@
 
 - [x] Task-001: Project Setup (commit: fade5e2)
 - [x] Task-002: DataGolf API Service (commit: 9886662)
+- [x] Task-003: Team Data Parser (commit: 587ba42)
+- [x] Task-004: EV Calculator Engine (commit: 4ac4762)
 
 ## Current Iteration
 
-- Iteration: 2
-- Working on: Task-003
+- Iteration: 4
+- Working on: Task-005
 - Started: 2026-04-03
 
 ## Blockers
