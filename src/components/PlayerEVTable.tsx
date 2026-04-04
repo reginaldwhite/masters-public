@@ -4,6 +4,7 @@ import { payoutConfigAtom } from '../atoms';
 import { calculatePlayerEV } from '../utils/evCalculator';
 import { calculateFamePremiums } from '../utils/fameCalculator';
 import { calculateCourseFits } from '../utils/courseFitCalculator';
+import { careerWinsData } from '../data/careerWins';
 import type { Player } from '../types';
 
 interface PlayerEVTableProps {
@@ -12,10 +13,11 @@ interface PlayerEVTableProps {
 
 interface PlayerEVRow {
   name: string;
-  winPct: number;
-  ev: number;
+  winPct: number | null;   // null = predictions not yet available
+  ev: number | null;
   fame: number;
   fit: number;
+  hasPrediction: boolean;
 }
 
 export default function PlayerEVTable({ players }: PlayerEVTableProps) {
@@ -23,19 +25,61 @@ export default function PlayerEVTable({ players }: PlayerEVTableProps) {
   const [search, setSearch] = useState('');
 
   const rows: PlayerEVRow[] = useMemo(() => {
-    const premiums = calculateFamePremiums(players);
+    // Build a lookup from the API predictions (may be a different event right now)
+    const apiMap = new Map(players.map((p) => [p.name.toLowerCase(), p]));
+
+    // Use careerWins as the canonical expected Masters field
+    const fieldNames = careerWinsData.map((cw) => cw.playerName);
+
+    // Also include any API players not in our expected list (e.g. late additions)
+    const extraApiNames = players
+      .filter((p) => !careerWinsData.some(
+        (cw) => cw.playerName.toLowerCase() === p.name.toLowerCase()
+      ))
+      .map((p) => p.name);
+
+    const allNames = [...fieldNames, ...extraApiNames];
+
+    // Build a synthetic Player[] for fame/fit calculations using API data where
+    // available, falling back to a stub for expected-but-not-yet-predicted players
+    const mergedPlayers: Player[] = allNames.map((name) => {
+      const api = apiMap.get(name.toLowerCase());
+      if (api) return api;
+      return {
+        name,
+        probabilities: { win: 0, top2: 0, top3: 0, top4: 0, top5: 0, top6: 0, top7: 0, top8: 0, top9: 0, top10: 0, makeCut: 0 },
+        isSenior: false,
+        isAmateur: false,
+        payout2025: 0,
+        finish2025: '',
+      };
+    });
+
+    const premiums = calculateFamePremiums(mergedPlayers);
     const premiumMap = new Map(premiums.map((fp) => [fp.playerName.toLowerCase(), fp.multiplier]));
-    const fits = calculateCourseFits(players);
+    const fits = calculateCourseFits(mergedPlayers);
     const fitMap = new Map(fits.map((cf) => [cf.playerName.toLowerCase(), cf.multiplier]));
-    return players
-      .map((p) => ({
-        name: p.name,
-        winPct: p.probabilities.win,
-        ev: calculatePlayerEV(p.probabilities, payoutConfig),
-        fame: premiumMap.get(p.name.toLowerCase()) ?? 1.0,
-        fit: fitMap.get(p.name.toLowerCase()) ?? 1.0,
-      }))
-      .sort((a, b) => b.ev - a.ev);
+
+    return allNames
+      .map((name) => {
+        const api = apiMap.get(name.toLowerCase());
+        const hasPrediction = !!api;
+        return {
+          name,
+          winPct: hasPrediction ? api!.probabilities.win : null,
+          ev: hasPrediction ? calculatePlayerEV(api!.probabilities, payoutConfig) : null,
+          fame: premiumMap.get(name.toLowerCase()) ?? 1.0,
+          fit: fitMap.get(name.toLowerCase()) ?? 1.0,
+          hasPrediction,
+        };
+      })
+      // Players with predictions sort by EV desc; unpredicted players go to bottom alpha
+      .sort((a, b) => {
+        if (a.hasPrediction && b.hasPrediction) return (b.ev ?? 0) - (a.ev ?? 0);
+        if (a.hasPrediction) return -1;
+        if (b.hasPrediction) return 1;
+        return a.name.localeCompare(b.name);
+      });
   }, [players, payoutConfig]);
 
   const filtered = useMemo(() => {
@@ -77,15 +121,15 @@ export default function PlayerEVTable({ players }: PlayerEVTableProps) {
                 <td className="px-3 py-2 text-gray-400 tabular-nums">{idx + 1}</td>
                 <td className="px-3 py-2 text-gray-800 font-medium">{row.name}</td>
                 <td className="px-3 py-2 text-right tabular-nums text-gray-600">
-                  {(row.winPct * 100).toFixed(1)}%
+                  {row.winPct !== null ? `${(row.winPct * 100).toFixed(1)}%` : <span className="text-gray-300">—</span>}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums font-semibold text-[#006747]">
-                  {(row.ev * 100).toFixed(2)}%
+                  {row.ev !== null ? `${(row.ev * 100).toFixed(2)}%` : <span className="text-gray-300 font-normal">—</span>}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums text-gray-500">
                   {row.fame > 1.0 ? (
-                    <span className="inline-flex items-center gap-0.5 text-orange-600 font-medium">
-                      🔥{row.fame.toFixed(2)}×
+                    <span className="font-medium text-orange-600">
+                      {row.fame.toFixed(2)}×
                     </span>
                   ) : (
                     <span className="text-gray-300">1.00×</span>
@@ -93,8 +137,8 @@ export default function PlayerEVTable({ players }: PlayerEVTableProps) {
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums text-gray-500">
                   {row.fit > 1.10 ? (
-                    <span className="inline-flex items-center gap-0.5 text-blue-600 font-medium">
-                      🏌️{row.fit.toFixed(2)}×
+                    <span className="font-medium text-blue-600">
+                      {row.fit.toFixed(2)}×
                     </span>
                   ) : (
                     <span className="text-gray-300">1.00×</span>

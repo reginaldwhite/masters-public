@@ -146,7 +146,7 @@ export async function fetchSkillRatings(): Promise<Map<number, DGSkillRating>> {
 }
 
 export interface FetchPredictionsOptions {
-  /** Which model to use – defaults to "baseline" */
+  /** Which model to use – defaults to "baseline_history_fit" (baseline + course history + course fit) */
   model?: 'baseline' | 'baseline_history_fit';
 }
 
@@ -159,7 +159,7 @@ export interface FetchPredictionsOptions {
  * The API key is read from the VITE_DATAGOLF_API_KEY environment variable.
  */
 export async function fetchPredictions({
-  model = 'baseline',
+  model = 'baseline_history_fit',
 }: FetchPredictionsOptions = {}): Promise<{
   players: Player[];
   eventName: string;

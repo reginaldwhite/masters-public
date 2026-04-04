@@ -210,7 +210,7 @@ describe('fetchPredictions', () => {
   });
 
   it('throws DataGolfError when no players in response', async () => {
-    const empty = buildMockResponse({ baseline: [] });
+    const empty = buildMockResponse({ baseline: [], baseline_history_fit: [] });
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(empty), { status: 200 }),
     );

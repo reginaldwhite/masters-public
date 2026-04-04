@@ -517,6 +517,114 @@ npm run build
 grep -r "0304522e" dist/ || echo "API key not in build output ✓"
 ```
 
+---
+
+## Phase 3: Course Fit Multiplier
+
+### Task-014: Skill Ratings Fetch + Player SG Fields
+
+**Priority**: High
+**Estimated Iterations**: 2
+
+Extend the DataGolf service to fetch player skill ratings (SG splits) alongside predictions, and add those fields to the `Player` type.
+
+**Background — DataGolf Skill Ratings API:**
+- Endpoint: `GET /preds/skill-ratings?display=value&file_format=json&key=...`
+- Returns 434 players with: `dg_id`, `player_name` ("Last, First"), `sg_ott`, `sg_app`, `sg_arg`, `sg_putt`, `sg_total`, `driving_dist`, `driving_acc`
+- Proxied via Vite at `/api/datagolf/preds/skill-ratings`
+
+**Acceptance Criteria**:
+
+- [ ] `DGSkillRating` interface added to `src/services/datagolf.ts`
+- [ ] `fetchSkillRatings()` async function added to `datagolf.ts`; calls `/api/datagolf/preds/skill-ratings?display=value&file_format=json&key=...`
+- [ ] `Player` type extended with optional SG fields: `sgOtt?: number`, `sgApp?: number`, `sgAtg?: number`, `sgPutt?: number` (default `undefined` / absent when not available)
+- [ ] `SetupWizard.tsx`: after `fetchPredictions()` resolves, also call `fetchSkillRatings()` and merge by `dg_id` (primary) or fuzzy name match (fallback); players without a match keep `sg*` as `undefined`
+- [ ] Existing `mapDGPlayerToPlayer` unchanged — SG merge is a separate enrichment step
+- [ ] TypeScript compiles clean
+- [ ] Tests: add unit tests for `fetchSkillRatings()` mocking the API response
+
+**Verification**:
+
+```bash
+npx tsc --noEmit
+npx vitest run
+# Manual: load app → fetch players → console.log first player should show sgOtt/sgApp/sgAtg/sgPutt values
+```
+
+---
+
+### Task-015: Augusta Course Fit Calculator
+
+**Priority**: High
+**Estimated Iterations**: 2
+
+Create `src/utils/courseFitCalculator.ts` that computes a per-player Augusta course fit multiplier (1.00–1.30) from the four SG categories, weighted according to the DataGolf Masters preview newsletter analysis.
+
+**Augusta Weighting Strategy (from DataGolf Newsletter #76, April 2 2026):**
+
+The newsletter establishes that Augusta National has a distinct SG category profile vs. a typical PGA Tour stop:
+
+| Category | Typical Tour | Augusta Weight | Rationale |
+|---|---|---|---|
+| Off the Tee (OTT) | ~15% | **15%** | Standard; accuracy > distance since 2021 |
+| Approach (APP) | ~35% | **35%** | Standard share of scoring variation |
+| Around the Green (ATG) | ~20% | **35%** | *Elevated* — "driven more variation than typical"; winners' best category each of last 5 years |
+| Putting (PUTT) | ~30% | **15%** | *Reduced* — "driven relatively less"; winners' consistently worst category |
+
+Normalization mirrors `fameCalculator.ts`: `1.0 + (weightedScore / maxScore) × 0.30`
+
+**Acceptance Criteria**:
+
+- [ ] `CourseFit` type added to `src/types/index.ts`: `{ playerName: string; multiplier: number }`
+- [ ] `src/utils/courseFitCalculator.ts` created with:
+  - `AUGUSTA_WEIGHTS = { ott: 0.15, app: 0.35, atg: 0.35, putt: 0.15 }` exported constant
+  - `calculateCourseFitScore(sgOtt, sgApp, sgAtg, sgPutt): number` — returns weighted SG sum
+  - `calculateCourseFits(players: Player[]): CourseFit[]` — normalizes to 1.00–1.30, players missing all SG data receive `1.00`
+- [ ] Players with `undefined` SG fields receive multiplier `1.00` (neutral), not penalized
+- [ ] Unit tests in `src/utils/__tests__/courseFitCalculator.test.ts`:
+  - Weighted score calculation is correct
+  - Normalization produces range [1.00, 1.30]
+  - Player with all-zero or missing SG gets 1.00
+  - Field with only one player gets 1.30 (only player is "best")
+- [ ] TypeScript compiles clean
+
+**Verification**:
+
+```bash
+npx tsc --noEmit
+npx vitest run
+```
+
+---
+
+### Task-016: Wire Course Fit into UI
+
+**Priority**: High
+**Estimated Iterations**: 2-3
+
+Integrate the course fit multiplier into the app's state, preview table, and auction dashboard.
+
+**Acceptance Criteria**:
+
+- [ ] `courseFitsAtom` added to `src/atoms/index.ts` (`atom<CourseFit[]>([])`)
+- [ ] `SetupWizard.tsx`: after players + skill ratings are fetched, compute `calculateCourseFits(players)` and store in `courseFitsAtom`
+- [ ] `PlayerEVTable.tsx`:
+  - Add a **"Fit"** column (after Fame) showing course fit multiplier formatted as `1.23×` with 🏌️ icon for players above 1.10, muted gray for 1.00
+  - Column header should be `"Course Fit"` with a tooltip/title of the Augusta weights
+- [ ] `src/components/AuctionDashboard.tsx` (or wherever team EV cards are rendered): show a combined **"Adj. Multiplier"** for each team = product of all player `(fame × courseFit)` multipliers, or show per-player breakdown in the team detail view
+- [ ] `colSpan` on the empty-row fallback updated to match new column count
+- [ ] TypeScript compiles clean; all 99+ tests pass; no regressions
+
+**Verification**:
+
+```bash
+npx tsc --noEmit
+npx vitest run
+# Manual: load app → PlayerEVTable shows Fit column → Scheffler shows high Fit → Spieth/Thomas visible (once Masters field loads)
+```
+
+---
+
 ## Out of Scope
 
 - Database or persistent storage (session-only)
