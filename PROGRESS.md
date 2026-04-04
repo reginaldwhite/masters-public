@@ -27,21 +27,20 @@
 
 ## Current Iteration
 
-- Iteration: Phase 3 planned
-- Working on: Task-014 (next)
+- Iteration: All tasks complete (Phases 1-3 + polish)
+- Working on: N/A
 - Started: 2026-04-04
-
-
 
 ## Blockers
 
-- DataGolf pre-tournament API currently returns Valero Texas Open field.
-  Masters predictions publish after ~April 6-7. event_id=14 is in the URL;
-  warning banner auto-clears when Masters field is live.
+- DataGolf pre-tournament API returns Valero Texas Open field until ~April 6-7.
+  event_id=14 is in the URL; warning banner clears automatically when Masters field is live.
 
 ## Notes
 
 - Phase 1 complete with all 8 tasks done
-- Phase 2 adds: .env API key, exact position probs, auto fame premium, restructured setup
-- DataGolf API `add_position` parameter discovered — provides exact top_2..top_9 probabilities
-- Fame formula: fame_score = 3×major_wins + all_pro_wins, normalized to 1.00–1.30 multiplier
+- Phase 2: .env API key, exact position probs, auto fame premium, restructured setup
+- Phase 3: SG skill data fetch, Augusta course fit multiplier (OTT 15%, App 35%, ATG 35%, Putt 15%)
+- Post-Phase 3 polish (commit: be4cce8): baseline_history_fit model, field-derived player list, no emojis in preview table
+- Fame formula: fame_score = 3x major_wins + all_pro_wins, normalized to 1.00-1.30
+- Course fit formula: weighted SG score (Augusta weights) normalized to 1.00-1.30
