@@ -9,6 +9,15 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    proxy: {
+      '/api/datagolf': {
+        target: 'https://feeds.datagolf.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/datagolf/, ''),
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',
