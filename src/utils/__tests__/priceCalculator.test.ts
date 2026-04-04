@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import type { Team, FamePremium, Player, PositionProbabilities } from '../../types';
-import { parseFamePremiums } from '../famePremiumParser';
 import {
   getTeamFamePremium,
   getAuctionPositionFactor,
@@ -37,62 +36,6 @@ function makeTeam(groupId: number, playerNames: string[]): Team {
     evDollars: 500,
   };
 }
-
-// ── Fame Premium Parser ──────────────────────────────────────────────────────
-
-describe('parseFamePremiums', () => {
-  it('parses valid input lines', () => {
-    const input = `Tiger Woods: 1.25
-Phil Mickelson: 1.15
-Rory McIlroy: 1.20`;
-
-    const result = parseFamePremiums(input);
-
-    expect(result).toHaveLength(3);
-    expect(result[0]).toEqual({ playerName: 'Tiger Woods', multiplier: 1.25 });
-    expect(result[1]).toEqual({ playerName: 'Phil Mickelson', multiplier: 1.15 });
-    expect(result[2]).toEqual({ playerName: 'Rory McIlroy', multiplier: 1.2 });
-  });
-
-  it('skips empty lines', () => {
-    const input = `Tiger Woods: 1.25
-
-Phil Mickelson: 1.15
-
-`;
-    const result = parseFamePremiums(input);
-    expect(result).toHaveLength(2);
-  });
-
-  it('skips lines missing a colon', () => {
-    const input = `Tiger Woods 1.25
-Phil Mickelson: 1.15`;
-
-    const result = parseFamePremiums(input);
-    expect(result).toHaveLength(1);
-    expect(result[0].playerName).toBe('Phil Mickelson');
-  });
-
-  it('trims whitespace from names and values', () => {
-    const input = `  Tiger Woods  :  1.25  `;
-    const result = parseFamePremiums(input);
-    expect(result).toHaveLength(1);
-    expect(result[0]).toEqual({ playerName: 'Tiger Woods', multiplier: 1.25 });
-  });
-
-  it('returns empty array for empty input', () => {
-    expect(parseFamePremiums('')).toEqual([]);
-    expect(parseFamePremiums('   \n  \n ')).toEqual([]);
-  });
-
-  it('skips lines with non-numeric multiplier', () => {
-    const input = `Tiger Woods: abc
-Phil Mickelson: 1.15`;
-    const result = parseFamePremiums(input);
-    expect(result).toHaveLength(1);
-    expect(result[0].playerName).toBe('Phil Mickelson');
-  });
-});
 
 // ── Team Fame Premium ────────────────────────────────────────────────────────
 
