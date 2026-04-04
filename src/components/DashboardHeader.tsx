@@ -5,7 +5,6 @@ import {
   teamsSoldCountAtom,
   teamsAtom,
   viewAtom,
-  apiKeyAtom,
   playersAtom,
   famePremiumsAtom,
   amateursAtom,
@@ -21,7 +20,6 @@ export default function DashboardHeader() {
   const soldCount = useAtomValue(teamsSoldCountAtom);
 
   const setView = useSetAtom(viewAtom);
-  const setApiKey = useSetAtom(apiKeyAtom);
   const setPlayers = useSetAtom(playersAtom);
   const setTeams = useSetAtom(teamsAtom);
   const setFamePremiums = useSetAtom(famePremiumsAtom);
@@ -37,7 +35,6 @@ export default function DashboardHeader() {
 
   const handleReset = () => {
     if (!confirm('Reset all data and return to Setup?')) return;
-    setApiKey('');
     setPlayers([]);
     setTeams([]);
     setFamePremiums([]);

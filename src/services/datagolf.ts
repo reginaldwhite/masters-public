@@ -86,7 +86,6 @@ export class DataGolfError extends Error {
 const PROXY_BASE = '/api/datagolf';
 
 export interface FetchPredictionsOptions {
-  apiKey: string;
   /** Which model to use – defaults to "baseline" */
   model?: 'baseline' | 'baseline_history_fit';
 }
@@ -96,15 +95,17 @@ export interface FetchPredictionsOptions {
  *
  * Uses the proxy path `/api/datagolf/...` which Vite rewrites to
  * `https://feeds.datagolf.com/...` during development.
+ *
+ * The API key is read from the VITE_DATAGOLF_API_KEY environment variable.
  */
 export async function fetchPredictions({
-  apiKey,
   model = 'baseline',
-}: FetchPredictionsOptions): Promise<{
+}: FetchPredictionsOptions = {}): Promise<{
   players: Player[];
   eventName: string;
   lastUpdated: string;
 }> {
+  const apiKey = import.meta.env.VITE_DATAGOLF_API_KEY ?? '';
   if (!apiKey) {
     throw new DataGolfError('API key is required');
   }

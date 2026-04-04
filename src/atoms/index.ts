@@ -6,9 +6,6 @@ import { calculateAllTeamEVs } from '../utils/evCalculator';
 export type View = 'dashboard' | 'setup';
 export const viewAtom = atom<View>('setup');
 
-// API key for Data Golf
-export const apiKeyAtom = atom<string>('');
-
 // Player data fetched from API
 export const playersAtom = atom<Player[]>([]);
 

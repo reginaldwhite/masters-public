@@ -116,6 +116,7 @@ function buildMockResponse(overrides: Partial<DGResponse> = {}): DGResponse {
 describe('fetchPredictions', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.stubEnv('VITE_DATAGOLF_API_KEY', 'test-key');
   });
 
   it('returns mapped players from a successful response', async () => {
@@ -124,7 +125,7 @@ describe('fetchPredictions', () => {
       new Response(JSON.stringify(mockResp), { status: 200 }),
     );
 
-    const result = await fetchPredictions({ apiKey: 'test-key' });
+    const result = await fetchPredictions();
 
     expect(result.players).toHaveLength(1);
     expect(result.players[0].name).toBe('Scottie Scheffler');
@@ -133,10 +134,12 @@ describe('fetchPredictions', () => {
   });
 
   it('throws DataGolfError when API key is empty', async () => {
-    await expect(fetchPredictions({ apiKey: '' })).rejects.toThrow(
+    vi.stubEnv('VITE_DATAGOLF_API_KEY', '');
+
+    await expect(fetchPredictions()).rejects.toThrow(
       DataGolfError,
     );
-    await expect(fetchPredictions({ apiKey: '' })).rejects.toThrow(
+    await expect(fetchPredictions()).rejects.toThrow(
       'API key is required',
     );
   });
@@ -146,7 +149,7 @@ describe('fetchPredictions', () => {
       new Response('Unauthorized', { status: 401 }),
     );
 
-    await expect(fetchPredictions({ apiKey: 'bad-key' })).rejects.toThrow(
+    await expect(fetchPredictions()).rejects.toThrow(
       'Invalid DataGolf API key',
     );
   });
@@ -156,7 +159,7 @@ describe('fetchPredictions', () => {
       new TypeError('Failed to fetch'),
     );
 
-    await expect(fetchPredictions({ apiKey: 'key' })).rejects.toThrow(
+    await expect(fetchPredictions()).rejects.toThrow(
       'Network error',
     );
   });
@@ -169,7 +172,7 @@ describe('fetchPredictions', () => {
       }),
     );
 
-    await expect(fetchPredictions({ apiKey: 'key' })).rejects.toThrow(
+    await expect(fetchPredictions()).rejects.toThrow(
       'Failed to parse',
     );
   });
@@ -180,7 +183,7 @@ describe('fetchPredictions', () => {
       new Response(JSON.stringify(empty), { status: 200 }),
     );
 
-    await expect(fetchPredictions({ apiKey: 'key' })).rejects.toThrow(
+    await expect(fetchPredictions()).rejects.toThrow(
       'No player predictions found',
     );
   });
@@ -194,16 +197,16 @@ describe('fetchPredictions', () => {
       );
 
     await fetchPredictions({
-      apiKey: 'key',
       model: 'baseline_history_fit',
     });
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('key=key'),
+      expect.stringContaining('key=test-key'),
     );
   });
 
   it('constructs the correct proxy URL', async () => {
+    vi.stubEnv('VITE_DATAGOLF_API_KEY', 'my-key');
     const mockResp = buildMockResponse();
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
@@ -211,7 +214,7 @@ describe('fetchPredictions', () => {
         new Response(JSON.stringify(mockResp), { status: 200 }),
       );
 
-    await fetchPredictions({ apiKey: 'my-key' });
+    await fetchPredictions();
 
     expect(fetchSpy).toHaveBeenCalledWith(
       '/api/datagolf/preds/pre-tournament?tour=pga&file_format=json&key=my-key',

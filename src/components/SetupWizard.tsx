@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import {
-  apiKeyAtom,
   playersAtom,
   teamsAtom,
   famePremiumsAtom,
@@ -22,7 +21,6 @@ type FetchStatus = 'idle' | 'loading' | 'success' | 'error';
 
 export default function SetupWizard() {
   // ── Jotai state ──────────────────────────────────────────────────────────
-  const [apiKey, setApiKey] = useAtom(apiKeyAtom);
   const [players, setPlayers] = useAtom(playersAtom);
   const setTeams = useSetAtom(teamsAtom);
   const setFamePremiums = useSetAtom(famePremiumsAtom);
@@ -36,8 +34,6 @@ export default function SetupWizard() {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   // Step 1
-  const [keyInput, setKeyInput] = useState(apiKey);
-  const [showKey, setShowKey] = useState(false);
   const [fetchStatus, setFetchStatus] = useState<FetchStatus>(
     players.length > 0 ? 'success' : 'idle',
   );
@@ -78,13 +74,11 @@ export default function SetupWizard() {
   // ── Step 1: Fetch players ────────────────────────────────────────────────
 
   const handleFetchPlayers = async () => {
-    if (!keyInput.trim()) return;
     setFetchStatus('loading');
     setFetchError('');
 
     try {
-      const result = await fetchPredictions({ apiKey: keyInput.trim() });
-      setApiKey(keyInput.trim());
+      const result = await fetchPredictions();
       setPlayers(result.players);
       setPlayerCount(result.players.length);
       setFetchStatus('success');
@@ -190,7 +184,6 @@ export default function SetupWizard() {
   };
 
   const handleResetAll = () => {
-    setApiKey('');
     setPlayers([]);
     setTeams([]);
     setFamePremiums([]);
@@ -198,7 +191,6 @@ export default function SetupWizard() {
     setAuction(new Map());
     setOnTheBlock(null);
     // Reset local state
-    setKeyInput('');
     setFetchStatus('idle');
     setFetchError('');
     setPlayerCount(0);
@@ -226,37 +218,16 @@ export default function SetupWizard() {
 
       <div className="px-4">
         {currentStep === 1 && (
-          <StepCard title="Step 1" subtitle="DataGolf API Key">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              API Key
-            </label>
-            <div className="relative">
-              <input
-                type={showKey ? 'text' : 'password'}
-                value={keyInput}
-                onChange={(e) => setKeyInput(e.target.value)}
-                placeholder="Enter your DataGolf API key"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base
-                           focus:outline-none focus:ring-2 focus:ring-[#006747]/40 focus:border-[#006747]
-                           font-mono pr-12"
-                onKeyDown={(e) => e.key === 'Enter' && handleFetchPlayers()}
-              />
-              <button
-                type="button"
-                onClick={() => setShowKey((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600
-                           p-1 text-sm"
-                aria-label={showKey ? 'Hide key' : 'Show key'}
-              >
-                {showKey ? '🙈' : '👁️'}
-              </button>
-            </div>
+          <StepCard title="Step 1" subtitle="Fetch Players">
+            <p className="text-sm text-gray-600 mb-4">
+              Fetch player predictions from DataGolf.
+            </p>
 
             <button
               type="button"
               onClick={handleFetchPlayers}
-              disabled={!keyInput.trim() || fetchStatus === 'loading'}
-              className="mt-4 w-full bg-[#006747] text-white font-semibold rounded-lg
+              disabled={fetchStatus === 'loading'}
+              className="w-full bg-[#006747] text-white font-semibold rounded-lg
                          py-3 text-base transition-all active:scale-[0.98]
                          disabled:opacity-50 disabled:cursor-not-allowed
                          flex items-center justify-center gap-2 min-h-[48px]"
@@ -267,7 +238,7 @@ export default function SetupWizard() {
                   Fetching…
                 </>
               ) : (
-                'Test & Fetch Players'
+                'Fetch Players'
               )}
             </button>
 
