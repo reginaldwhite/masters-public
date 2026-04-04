@@ -19,15 +19,25 @@
 - [x] Task-012: Restructured Setup Flow (commit: 7f3084a)
 - [x] Task-013: Final Integration Test & Cleanup (commit: 7cb624b)
 
+## Phase 3 — Course Fit Multiplier
+
+- [x] Task-014: Skill Ratings Fetch + Player SG Fields (commit: 4c30917)
+- [ ] Task-015: Augusta Course Fit Calculator
+- [ ] Task-016: Wire Course Fit into UI
+
 ## Current Iteration
 
-- Iteration: 13
-- Working on: ALL PHASE 2 TASKS COMPLETE
+- Iteration: Phase 3 planned
+- Working on: Task-014 (next)
 - Started: 2026-04-04
+
+
 
 ## Blockers
 
-- None
+- DataGolf pre-tournament API currently returns Valero Texas Open field.
+  Masters predictions publish after ~April 6-7. event_id=14 is in the URL;
+  warning banner auto-clears when Masters field is live.
 
 ## Notes
 
