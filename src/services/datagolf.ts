@@ -148,7 +148,7 @@ export async function fetchSkillRatings(): Promise<Map<number, DGSkillRating>> {
 export interface DGRankingRaw {
   dg_id: number;
   player_name: string; // "Last, First"
-  dg_rank: number;
+  datagolf_rank: number;
   owgr_rank: number;
   am: number;
   country: string;
@@ -168,7 +168,7 @@ export async function fetchDGRankings(): Promise<Map<number, number>> {
   const apiKey = import.meta.env.VITE_DATAGOLF_API_KEY ?? '';
   if (!apiKey) throw new DataGolfError('API key is required');
 
-  const url = `${PROXY_BASE}/preds/get-dg-rankings?file_format=json&key=${encodeURIComponent(apiKey)}`;
+  const url = `${PROXY_BASE}/rankings/datagolf?file_format=json&key=${encodeURIComponent(apiKey)}`;
 
   let response: Response;
   try {
@@ -190,7 +190,7 @@ export async function fetchDGRankings(): Promise<Map<number, number>> {
 
   const map = new Map<number, number>();
   for (const p of data.rankings ?? []) {
-    map.set(p.dg_id, p.dg_rank);
+    map.set(p.dg_id, p.datagolf_rank);
   }
   return map;
 }

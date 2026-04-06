@@ -96,6 +96,13 @@ export default function SetupWizard() {
       const skillMap = skillResult.status === 'fulfilled' ? skillResult.value : new Map();
       const rankMap  = rankResult.status  === 'fulfilled' ? rankResult.value  : new Map();
 
+      if (rankResult.status === 'rejected') {
+        console.warn('DG rankings fetch failed:', rankResult.reason);
+      }
+      if (skillResult.status === 'rejected') {
+        console.warn('Skill ratings fetch failed:', skillResult.reason);
+      }
+
       const enriched = result.players.map((p) => {
         const sr     = p.dgId != null ? skillMap.get(p.dgId) : undefined;
         const dgRank = p.dgId != null ? rankMap.get(p.dgId)  : undefined;
