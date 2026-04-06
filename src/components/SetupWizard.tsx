@@ -10,7 +10,7 @@ import {
   auctionAtom,
   onTheBlockAtom,
 } from '../atoms';
-import { fetchPredictions, fetchSkillRatings, DataGolfError } from '../services/datagolf';
+import { fetchPredictions, fetchSkillRatings, fetchDGRankings, DataGolfError } from '../services/datagolf';
 import { parseTeamData, type ParsedTeam } from '../utils/teamParser';
 import { parseAmateurs } from '../utils/amateurParser';
 import { matchPlayersToTeams } from '../utils/nameMatcher';
@@ -88,24 +88,24 @@ export default function SetupWizard() {
       setFetchStatus('success');
       markCompleted(1);
 
-      // Fetch and merge skill ratings (best-effort — don't fail if unavailable)
-      try {
-        const skillMap = await fetchSkillRatings();
-        const enriched = result.players.map((p) => {
-          const sr = p.dgId != null ? skillMap.get(p.dgId) : undefined;
-          if (!sr) return p;
-          return {
-            ...p,
-            sgOtt: sr.sg_ott,
-            sgApp: sr.sg_app,
-            sgAtg: sr.sg_arg,
-            sgPutt: sr.sg_putt,
-          };
-        });
-        setPlayers(enriched);
-      } catch {
-        // Skill ratings are optional — silently ignore failures
-      }
+      // Fetch skill ratings AND DG rankings in parallel (both best-effort)
+      const [skillResult, rankResult] = await Promise.allSettled([
+        fetchSkillRatings(),
+        fetchDGRankings(),
+      ]);
+      const skillMap = skillResult.status === 'fulfilled' ? skillResult.value : new Map();
+      const rankMap  = rankResult.status  === 'fulfilled' ? rankResult.value  : new Map();
+
+      const enriched = result.players.map((p) => {
+        const sr     = p.dgId != null ? skillMap.get(p.dgId) : undefined;
+        const dgRank = p.dgId != null ? rankMap.get(p.dgId)  : undefined;
+        return {
+          ...p,
+          ...(sr ? { sgOtt: sr.sg_ott, sgApp: sr.sg_app, sgAtg: sr.sg_arg, sgPutt: sr.sg_putt } : {}),
+          ...(dgRank != null ? { dgRank } : {}),
+        };
+      });
+      setPlayers(enriched);
     } catch (err) {
       setFetchStatus('error');
       if (err instanceof DataGolfError) {

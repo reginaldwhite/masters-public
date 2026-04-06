@@ -145,6 +145,56 @@ export async function fetchSkillRatings(): Promise<Map<number, DGSkillRating>> {
   return map;
 }
 
+export interface DGRankingRaw {
+  dg_id: number;
+  player_name: string; // "Last, First"
+  dg_rank: number;
+  owgr_rank: number;
+  am: number;
+  country: string;
+  primary_tour: string;
+}
+
+export interface DGRankingsResponse {
+  last_updated: string;
+  rankings: DGRankingRaw[];
+}
+
+/**
+ * Fetch DataGolf rankings.
+ * Returns a Map from dg_id → dg_rank for fast lookup.
+ */
+export async function fetchDGRankings(): Promise<Map<number, number>> {
+  const apiKey = import.meta.env.VITE_DATAGOLF_API_KEY ?? '';
+  if (!apiKey) throw new DataGolfError('API key is required');
+
+  const url = `${PROXY_BASE}/preds/get-dg-rankings?file_format=json&key=${encodeURIComponent(apiKey)}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (err) {
+    throw new DataGolfError(`Network error fetching DG rankings: ${(err as Error).message}`);
+  }
+
+  if (!response.ok) {
+    throw new DataGolfError(`Rankings API returned status ${response.status}`, response.status);
+  }
+
+  let data: DGRankingsResponse;
+  try {
+    data = await response.json();
+  } catch {
+    throw new DataGolfError('Failed to parse DG rankings response as JSON');
+  }
+
+  const map = new Map<number, number>();
+  for (const p of data.rankings ?? []) {
+    map.set(p.dg_id, p.dg_rank);
+  }
+  return map;
+}
+
 export interface FetchPredictionsOptions {
   /** Which model to use – defaults to "baseline_history_fit" (baseline + course history + course fit) */
   model?: 'baseline' | 'baseline_history_fit';

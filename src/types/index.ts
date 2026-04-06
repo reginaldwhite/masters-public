@@ -1,6 +1,7 @@
 export interface Player {
   name: string;
   dgId?: number;
+  dgRank?: number;
   probabilities: PositionProbabilities;
   isSenior: boolean;
   isAmateur: boolean;
