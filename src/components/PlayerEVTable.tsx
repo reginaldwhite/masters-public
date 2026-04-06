@@ -107,7 +107,7 @@ export default function PlayerEVTable({ players }: PlayerEVTableProps) {
               <th className="text-left px-3 py-2 font-semibold w-10">#</th>
               <th className="text-left px-3 py-2 font-semibold">Player</th>
               <th className="text-right px-3 py-2 font-semibold">Win %</th>
-              <th className="text-right px-3 py-2 font-semibold">EV %</th>
+              <th className="text-right px-3 py-2 font-semibold" title="Contention-adjusted EV: higher finishes receive a 15% premium to favor players likely to contend and pay out">EV %</th>
               <th className="text-right px-3 py-2 font-semibold">Fame</th>
               <th className="text-right px-3 py-2 font-semibold" title="Augusta course fit: ATG 35%, App 35%, OTT 15%, Putt 15%">Course Fit</th>
             </tr>

@@ -9,6 +9,8 @@ import {
   calculateTeamEV,
   calculateAllTeamEVs,
   calculateFieldSummary,
+  getPositionBoost,
+  getBoostNormalization,
 } from '../evCalculator';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -187,30 +189,35 @@ describe('deriveMarginalProbabilities', () => {
 // ── 2. Player EV tests ──────────────────────────────────────────────────────
 
 describe('calculatePlayerEV', () => {
-  it('100% win probability → EV = 25%', () => {
+  it('100% win probability → EV > raw 25% (contention-boosted)', () => {
     const probs = makeProbs({ win: 1.0, top5: 1.0, top10: 1.0, makeCut: 1.0 });
     const ev = calculatePlayerEV(probs, DEFAULT_PAYOUT_CONFIG);
-    expect(ev).toBeCloseTo(0.25);
+
+    // With contention boost, 1st place is valued above its raw 25% payout
+    const norm = getBoostNormalization(DEFAULT_PAYOUT_CONFIG);
+    const expected = 0.25 * getPositionBoost(1) * norm;
+    expect(ev).toBeCloseTo(expected);
+    expect(ev).toBeGreaterThan(0.25);
   });
 
-  it('100% top5, 0% win → EV = weighted sum of positions 2-5', () => {
+  it('100% top5, 0% win → EV = boosted weighted sum of positions 2-5', () => {
     const probs = makeProbs({ win: 0, top5: 1.0, top10: 1.0, makeCut: 1.0 });
     const ev = calculatePlayerEV(probs, DEFAULT_PAYOUT_CONFIG);
 
     // Positions 2-5 payouts: 14, 12, 10, 9 = 45%
     // Decay weights [1,1.2,1.4,1.6] sum=5.2
-    // p2=1/5.2, p3=1.2/5.2, p4=1.4/5.2, p5=1.6/5.2
-    // EV from 2-5 = p2×0.14 + p3×0.12 + p4×0.10 + p5×0.09
+    // Each position gets its own contention boost, then normalized
     const w = [1, 1.2, 1.4, 1.6];
     const wSum = w.reduce((s, x) => s + x, 0);
-    const expected25 =
-      (w[0] / wSum) * 0.14 +
-      (w[1] / wSum) * 0.12 +
-      (w[2] / wSum) * 0.10 +
-      (w[3] / wSum) * 0.09;
+    const norm = getBoostNormalization(DEFAULT_PAYOUT_CONFIG);
+    const expected =
+      ((w[0] / wSum) * 0.14 * getPositionBoost(2) +
+       (w[1] / wSum) * 0.12 * getPositionBoost(3) +
+       (w[2] / wSum) * 0.10 * getPositionBoost(4) +
+       (w[3] / wSum) * 0.09 * getPositionBoost(5)) * norm;
 
     // Positions 6-10 have 0 mass (top10=top5=1.0), so no contribution
-    expect(ev).toBeCloseTo(expected25);
+    expect(ev).toBeCloseTo(expected);
   });
 
   it('all zero probabilities → EV = 0', () => {

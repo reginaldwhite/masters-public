@@ -35,6 +35,62 @@ function distributeWithDecay(totalProb: number, weights: number[]): number[] {
   return weights.map((w) => totalProb * (w / weightSum));
 }
 
+// ── Contention Boost ─────────────────────────────────────────────────────────
+
+/**
+ * Contention boost alpha. Rewards players whose probability mass is
+ * concentrated at higher finishing positions, penalizing longshots whose
+ * slim value comes mostly from low finishes (8th-10th).
+ *
+ * A player with high win probability gets their 1st-place payout valued
+ * at (1 + alpha) × raw. A player whose only value comes from 10th place
+ * gets no boost. After normalization the total pool is preserved, so the
+ * boost redistributes EV from the bottom of the board to the top.
+ *
+ * alpha = 0.15 → 15% premium for 1st, linearly declining to 0% for 10th.
+ * Set to 0 to disable.
+ */
+export const CONTENTION_BOOST = 0.15;
+
+/** Position weight: 1st gets max boost, 10th gets 1.0 (no boost). */
+export function getPositionBoost(
+  place: number,
+  alpha: number = CONTENTION_BOOST,
+): number {
+  const N = 10;
+  return 1 + alpha * Math.max(0, N - place) / (N - 1);
+}
+
+/**
+ * Normalization factor so total EV across a complete field is preserved
+ * after applying contention boosts.
+ * Equals unboostedPayoutSum / boostedPayoutSum.
+ */
+export function getBoostNormalization(
+  payoutConfig: PayoutConfig,
+  alpha: number = CONTENTION_BOOST,
+): number {
+  if (alpha === 0) return 1;
+
+  let unboosted = 0;
+  let boosted = 0;
+
+  for (const pos of payoutConfig.positions) {
+    unboosted += pos.percentage;
+    boosted += pos.percentage * getPositionBoost(pos.place, alpha);
+  }
+
+  // 10th place: 90% of 9th
+  const ninth = payoutConfig.positions.find((p) => p.place === 9);
+  if (ninth) {
+    const tenthPct = ninth.percentage * 0.9;
+    unboosted += tenthPct;
+    boosted += tenthPct * getPositionBoost(10, alpha);
+  }
+
+  return boosted > 0 ? unboosted / boosted : 1;
+}
+
 // ── 1. Position Probability Interpolator ─────────────────────────────────────
 
 /**
@@ -112,24 +168,26 @@ export function calculatePlayerEV(
 ): number {
   const m = deriveMarginalProbabilities(probs);
   const marginals = [m.p1, m.p2, m.p3, m.p4, m.p5, m.p6, m.p7, m.p8, m.p9, m.p10];
+  const norm = getBoostNormalization(payoutConfig);
 
   let ev = 0;
 
-  // Positions 1-9 from config
+  // Positions 1-9 from config, with contention boost
   for (const pos of payoutConfig.positions) {
     const idx = pos.place - 1;
     if (idx >= 0 && idx < marginals.length) {
-      ev += marginals[idx] * (pos.percentage / 100);
+      ev += marginals[idx] * (pos.percentage / 100) * getPositionBoost(pos.place);
     }
   }
 
-  // Position 10: 90% of 9th place payout
+  // Position 10: 90% of 9th place payout, with contention boost
   const ninthPlace = payoutConfig.positions.find((p) => p.place === 9);
   if (ninthPlace) {
-    ev += m.p10 * ((ninthPlace.percentage * 0.9) / 100);
+    ev += m.p10 * ((ninthPlace.percentage * 0.9) / 100) * getPositionBoost(10);
   }
 
-  return ev;
+  // Normalize to preserve total pool across the full field
+  return ev * norm;
 }
 
 // ── 3. Bonus Pool Calculators ────────────────────────────────────────────────
