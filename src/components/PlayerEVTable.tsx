@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAtomValue } from 'jotai';
-import { payoutConfigAtom } from '../atoms';
+import { payoutConfigAtom, dgRankingsAtom } from '../atoms';
 import { calculatePlayerEV } from '../utils/evCalculator';
 import { calculateFamePremiums } from '../utils/fameCalculator';
 import { calculateCourseFits } from '../utils/courseFitCalculator';
@@ -22,6 +22,7 @@ interface PlayerEVRow {
 
 export default function PlayerEVTable({ players }: PlayerEVTableProps) {
   const payoutConfig = useAtomValue(payoutConfigAtom);
+  const dgRankings = useAtomValue(dgRankingsAtom);
   const [search, setSearch] = useState('');
 
   const rows: PlayerEVRow[] = useMemo(() => {
@@ -55,7 +56,7 @@ export default function PlayerEVTable({ players }: PlayerEVTableProps) {
       };
     });
 
-    const premiums = calculateFamePremiums(mergedPlayers);
+    const premiums = calculateFamePremiums(mergedPlayers, dgRankings);
     const premiumMap = new Map(premiums.map((fp) => [fp.playerName.toLowerCase(), fp.multiplier]));
     const fits = calculateCourseFits(mergedPlayers);
     const fitMap = new Map(fits.map((cf) => [cf.playerName.toLowerCase(), cf.multiplier]));
@@ -80,7 +81,7 @@ export default function PlayerEVTable({ players }: PlayerEVTableProps) {
         if (b.hasPrediction) return 1;
         return a.name.localeCompare(b.name);
       });
-  }, [players, payoutConfig]);
+  }, [players, payoutConfig, dgRankings]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return rows;

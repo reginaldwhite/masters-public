@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useAtom, useSetAtom } from 'jotai';
+import { useAtom, useSetAtom, useAtomValue } from 'jotai';
 import {
   playersAtom,
   teamsAtom,
@@ -9,6 +9,7 @@ import {
   viewAtom,
   auctionAtom,
   onTheBlockAtom,
+  dgRankingsAtom,
 } from '../atoms';
 import { fetchPredictions, fetchSkillRatings, fetchDGRankings, DataGolfError } from '../services/datagolf';
 import { parseTeamData, type ParsedTeam } from '../utils/teamParser';
@@ -31,6 +32,7 @@ export default function SetupWizard() {
   const setView = useSetAtom(viewAtom);
   const setAuction = useSetAtom(auctionAtom);
   const setOnTheBlock = useSetAtom(onTheBlockAtom);
+  const setDgRankings = useSetAtom(dgRankingsAtom);
 
   // ── Wizard local state ───────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState(1);
@@ -93,14 +95,19 @@ export default function SetupWizard() {
         fetchSkillRatings(),
         fetchDGRankings(),
       ]);
-      const skillMap = skillResult.status === 'fulfilled' ? skillResult.value : new Map();
-      const rankMap  = rankResult.status  === 'fulfilled' ? rankResult.value  : new Map();
+      const skillMap = skillResult.status === 'fulfilled' ? skillResult.value : new Map<number, never>();
+      const rankMap  = rankResult.status  === 'fulfilled' ? rankResult.value  : new Map<number, number>();
 
       if (rankResult.status === 'rejected') {
         console.warn('DG rankings fetch failed:', rankResult.reason);
       }
       if (skillResult.status === 'rejected') {
         console.warn('Skill ratings fetch failed:', skillResult.reason);
+      }
+
+      // Store rankings map in atom — PlayerEVTable and dashboard both read from here
+      if (rankResult.status === 'fulfilled') {
+        setDgRankings(rankResult.value);
       }
 
       const enriched = result.players.map((p) => {
@@ -195,8 +202,11 @@ export default function SetupWizard() {
     0,
   );
 
+  // Read current rankings for use in handleGoToDashboard
+  const dgRankings = useAtomValue(dgRankingsAtom);
+
   // Auto-calculate fame premiums from player data
-  const autoFamePremiums = players.length > 0 ? calculateFamePremiums(players) : [];
+  const autoFamePremiums = players.length > 0 ? calculateFamePremiums(players, dgRankings) : [];
   const famePremiumsWithBoost = autoFamePremiums
     .filter((fp) => fp.multiplier > 1.0)
     .sort((a, b) => b.multiplier - a.multiplier);
@@ -204,8 +214,8 @@ export default function SetupWizard() {
   const handleGoToDashboard = () => {
     // 1. Build teams with matched data
     const teams = matchPlayersToTeams(parsedTeams, players, parsedAmateurs);
-    // 2. Calculate fame premiums
-    const premiums = calculateFamePremiums(players);
+    // 2. Calculate fame premiums using the live rankings map
+    const premiums = calculateFamePremiums(players, dgRankings);
     // 3. Store in atoms
     setTeams(teams);
     setFamePremiums(premiums);

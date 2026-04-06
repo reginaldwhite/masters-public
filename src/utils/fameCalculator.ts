@@ -20,14 +20,19 @@ export function calculateFameMultiplier(dgRank: number | undefined): number {
 }
 
 /**
- * Calculate fame premiums for all players in the field.
- * Uses each player's DataGolf rank (player.dgRank).
- * Players without a rank default to 1.00 (no premium).
- * Range: 1.00 to 1.30.
+ * Calculate fame premiums using an explicit DataGolf rankings map.
+ * Looks up each player's dg_id in the map — this is the authoritative path.
+ * Falls back to player.dgRank if the map has no entry, then to 1.00.
  */
-export function calculateFamePremiums(players: Player[]): FamePremium[] {
-  return players.map((p) => ({
-    playerName: p.name,
-    multiplier: calculateFameMultiplier(p.dgRank),
-  }));
+export function calculateFamePremiums(
+  players: Player[],
+  rankMap: Map<number, number> = new Map(),
+): FamePremium[] {
+  return players.map((p) => {
+    const rank = (p.dgId != null ? rankMap.get(p.dgId) : undefined) ?? p.dgRank;
+    return {
+      playerName: p.name,
+      multiplier: calculateFameMultiplier(rank),
+    };
+  });
 }

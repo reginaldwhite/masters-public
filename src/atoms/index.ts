@@ -50,6 +50,9 @@ export const payoutConfigAtom = atom<PayoutConfig>({
 // Fame premiums for popular players
 export const famePremiumsAtom = atom<FamePremium[]>([]);
 
+// DataGolf rankings map: dg_id → datagolf_rank (populated after fetch)
+export const dgRankingsAtom = atom<Map<number, number>>(new Map());
+
 // Course fit multipliers per player
 export const courseFitsAtom = atom<CourseFit[]>([]);
 
