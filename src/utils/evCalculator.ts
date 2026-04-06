@@ -47,10 +47,10 @@ function distributeWithDecay(totalProb: number, weights: number[]): number[] {
  * gets no boost. After normalization the total pool is preserved, so the
  * boost redistributes EV from the bottom of the board to the top.
  *
- * alpha = 0.15 → 15% premium for 1st, linearly declining to 0% for 10th.
+ * alpha = 0.20 → 20% premium for 1st, linearly declining to 0% for 10th.
  * Set to 0 to disable.
  */
-export const CONTENTION_BOOST = 0.15;
+export const CONTENTION_BOOST = 0.2;
 
 /** Position weight: 1st gets max boost, 10th gets 1.0 (no boost). */
 export function getPositionBoost(
