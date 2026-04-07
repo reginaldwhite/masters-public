@@ -10,6 +10,8 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
+    port: 5173,
+    strictPort: true,
     proxy: {
       '/api/datagolf': {
         target: 'https://feeds.datagolf.com',
@@ -17,6 +19,10 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api\/datagolf/, ''),
       },
     },
+  },
+  preview: {
+    port: 4173,
+    strictPort: true,
   },
   test: {
     globals: true,

@@ -105,9 +105,14 @@ export default function SetupWizard() {
         console.warn('Skill ratings fetch failed:', skillResult.reason);
       }
 
-      // Store rankings map in atom — PlayerEVTable and dashboard both read from here
+      // Store rankings map in atom — dashboard uses it in handleGoToDashboard
       if (rankResult.status === 'fulfilled') {
         setDgRankings(rankResult.value);
+        // Eagerly compute and store fame premiums so PlayerEVTable can read
+        // them directly without a secondary Jotai-Map reactivity chain
+        setFamePremiums(calculateFamePremiums(result.players, rankResult.value));
+      } else {
+        console.warn('DG rankings fetch failed:', rankResult.reason);
       }
 
       const enriched = result.players.map((p) => {
