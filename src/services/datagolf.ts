@@ -168,7 +168,7 @@ export async function fetchDGRankings(): Promise<Map<number, number>> {
   const apiKey = import.meta.env.VITE_DATAGOLF_API_KEY ?? '';
   if (!apiKey) throw new DataGolfError('API key is required');
 
-  const url = `${PROXY_BASE}/rankings/datagolf?file_format=json&key=${encodeURIComponent(apiKey)}`;
+  const url = `${PROXY_BASE}/preds/get-dg-rankings?file_format=json&key=${encodeURIComponent(apiKey)}`;
 
   let response: Response;
   try {
