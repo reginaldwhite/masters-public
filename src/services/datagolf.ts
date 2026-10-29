@@ -115,10 +115,7 @@ export interface DGSkillRatingsResponse {
  * Returns a Map from dg_id to DGSkillRating for fast lookup.
  */
 export async function fetchSkillRatings(): Promise<Map<number, DGSkillRating>> {
-  const apiKey = import.meta.env.VITE_DATAGOLF_API_KEY ?? '';
-  if (!apiKey) throw new DataGolfError('API key is required');
-
-  const url = `${PROXY_BASE}/preds/skill-ratings?display=value&file_format=json&key=${encodeURIComponent(apiKey)}`;
+  const url = `${PROXY_BASE}/preds/skill-ratings?display=value&file_format=json`;
 
   let response: Response;
   try {
@@ -165,10 +162,7 @@ export interface DGRankingsResponse {
  * Returns a Map from dg_id → dg_rank for fast lookup.
  */
 export async function fetchDGRankings(): Promise<Map<number, number>> {
-  const apiKey = import.meta.env.VITE_DATAGOLF_API_KEY ?? '';
-  if (!apiKey) throw new DataGolfError('API key is required');
-
-  const url = `${PROXY_BASE}/preds/get-dg-rankings?file_format=json&key=${encodeURIComponent(apiKey)}`;
+  const url = `${PROXY_BASE}/preds/get-dg-rankings?file_format=json`;
 
   let response: Response;
   try {
@@ -241,10 +235,7 @@ export async function fetchLivePredictions(): Promise<{
   eventName: string;
   lastUpdated: string;
 }> {
-  const apiKey = import.meta.env.VITE_DATAGOLF_API_KEY ?? '';
-  if (!apiKey) throw new DataGolfError('API key is required');
-
-  const url = `${PROXY_BASE}/preds/in-play?tour=pga&file_format=json&key=${encodeURIComponent(apiKey)}`;
+  const url = `${PROXY_BASE}/preds/in-play?tour=pga&file_format=json`;
 
   let response: Response;
   try {
@@ -316,12 +307,10 @@ export interface FetchPredictionsOptions {
 }
 
 /**
- * Fetch pre-tournament predictions from DataGolf via the Vite dev proxy.
+ * Fetch pre-tournament predictions from DataGolf.
  *
- * Uses the proxy path `/api/datagolf/...` which Vite rewrites to
- * `https://feeds.datagolf.com/...` during development.
- *
- * The API key is read from the VITE_DATAGOLF_API_KEY environment variable.
+ * Uses the proxy path `/api/datagolf/...` (the Vercel function in production, the
+ * Vite dev proxy locally), which adds the API key server-side.
  */
 export async function fetchPredictions({
   model = 'baseline_history_fit',
@@ -330,12 +319,7 @@ export async function fetchPredictions({
   eventName: string;
   lastUpdated: string;
 }> {
-  const apiKey = import.meta.env.VITE_DATAGOLF_API_KEY ?? '';
-  if (!apiKey) {
-    throw new DataGolfError('API key is required');
-  }
-
-  const url = `${PROXY_BASE}/preds/pre-tournament?tour=pga&event_id=14&add_position=2,3,4,6,7,8,9&file_format=json&key=${encodeURIComponent(apiKey)}`;
+  const url = `${PROXY_BASE}/preds/pre-tournament?tour=pga&event_id=14&add_position=2,3,4,6,7,8,9&file_format=json`;
 
   let response: Response;
   try {

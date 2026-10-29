@@ -352,7 +352,7 @@ Move the DataGolf API key from runtime input to a build-time `.env` file. This s
 
 **Acceptance Criteria**:
 
-- [ ] `.env` file created at project root with `VITE_DATAGOLF_API_KEY=your-datagolf-api-key`
+- [ ] `.env` file created at project root with `DATAGOLF_API_KEY=your-datagolf-api-key` (server-side only: read by the Vercel proxy and the Vite dev proxy)
 - [ ] `.env` is already in `.gitignore` (verify)
 - [ ] `src/services/datagolf.ts`: `fetchPredictions` reads key from `import.meta.env.VITE_DATAGOLF_API_KEY` instead of taking `apiKey` parameter
 - [ ] `FetchPredictionsOptions` interface updated — `apiKey` field removed

@@ -148,7 +148,6 @@ function buildMockResponse(overrides: Partial<DGResponse> = {}): DGResponse {
 describe('fetchPredictions', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.stubEnv('VITE_DATAGOLF_API_KEY', 'test-key');
   });
 
   it('returns mapped players from a successful response', async () => {
@@ -163,17 +162,6 @@ describe('fetchPredictions', () => {
     expect(result.players[0].name).toBe('Scottie Scheffler');
     expect(result.eventName).toBe('The Masters');
     expect(result.lastUpdated).toBe('2026-04-04 08:00:00  UTC');
-  });
-
-  it('throws DataGolfError when API key is empty', async () => {
-    vi.stubEnv('VITE_DATAGOLF_API_KEY', '');
-
-    await expect(fetchPredictions()).rejects.toThrow(
-      DataGolfError,
-    );
-    await expect(fetchPredictions()).rejects.toThrow(
-      'API key is required',
-    );
   });
 
   it('throws DataGolfError on 401 (invalid key)', async () => {
@@ -220,7 +208,7 @@ describe('fetchPredictions', () => {
     );
   });
 
-  it('uses the requested model', async () => {
+  it('never sends the API key from the browser', async () => {
     const mockResp = buildMockResponse();
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
@@ -233,12 +221,11 @@ describe('fetchPredictions', () => {
     });
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('key=test-key'),
+      expect.not.stringContaining('key='),
     );
   });
 
   it('constructs the correct proxy URL', async () => {
-    vi.stubEnv('VITE_DATAGOLF_API_KEY', 'my-key');
     const mockResp = buildMockResponse();
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
@@ -249,7 +236,7 @@ describe('fetchPredictions', () => {
     await fetchPredictions();
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      '/api/datagolf/preds/pre-tournament?tour=pga&event_id=14&add_position=2,3,4,6,7,8,9&file_format=json&key=my-key',
+      '/api/datagolf/preds/pre-tournament?tour=pga&event_id=14&add_position=2,3,4,6,7,8,9&file_format=json',
     );
   });
 });
@@ -259,8 +246,6 @@ describe('fetchPredictions', () => {
 describe('fetchSkillRatings', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    // @ts-expect-error mock env
-    import.meta.env.VITE_DATAGOLF_API_KEY = 'test-key';
   });
 
   it('returns a Map keyed by dg_id', async () => {
@@ -280,7 +265,7 @@ describe('fetchSkillRatings', () => {
     const result = await fetchSkillRatings();
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      '/api/datagolf/preds/skill-ratings?display=value&file_format=json&key=test-key',
+      '/api/datagolf/preds/skill-ratings?display=value&file_format=json',
     );
     expect(result.size).toBe(2);
     expect(result.get(18417)?.sg_app).toBe(0.899);
@@ -294,12 +279,6 @@ describe('fetchSkillRatings', () => {
       json: async () => ({}),
     } as Response);
 
-    await expect(fetchSkillRatings()).rejects.toBeInstanceOf(DataGolfError);
-  });
-
-  it('throws DataGolfError when API key is missing', async () => {
-    // @ts-expect-error mock env
-    import.meta.env.VITE_DATAGOLF_API_KEY = '';
     await expect(fetchSkillRatings()).rejects.toBeInstanceOf(DataGolfError);
   });
 });

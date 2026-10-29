@@ -1,0 +1,9 @@
+# Local secrets and reference files: never upload with `vercel deploy`.
+# The key reaches the function via the DATAGOLF_API_KEY project env var instead.
+.env
+.env.*
+datagolf api key
+*.png
+Previewing*.html
+Valero*.html
+dist
