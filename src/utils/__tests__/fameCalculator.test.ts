@@ -32,8 +32,8 @@ function makePlayer(name: string, dgRank?: number): Player {
 // ── calculateFameMultiplier ───────────────────────────────────────────────────
 
 describe('calculateFameMultiplier', () => {
-  it('rank 1 → 1.30 (max premium)', () => {
-    expect(calculateFameMultiplier(1)).toBeCloseTo(1.30);
+  it('rank 1 → 1.15 (max premium)', () => {
+    expect(calculateFameMultiplier(1)).toBeCloseTo(1.15);
   });
 
   it(`rank ${FAME_RANK_CUTOFF} → 1.00 (no premium)`, () => {
@@ -50,16 +50,16 @@ describe('calculateFameMultiplier', () => {
   });
 
   it('middle rank is proportional', () => {
-    // rank 25 with cutoff 50: 1 + (50-25)/(50-1) * 0.30
-    const expected = 1 + ((FAME_RANK_CUTOFF - 25) / (FAME_RANK_CUTOFF - 1)) * 0.30;
+    // rank 25 with cutoff 50: 1 + (50-25)/(50-1) * 0.15
+    const expected = 1 + ((FAME_RANK_CUTOFF - 25) / (FAME_RANK_CUTOFF - 1)) * 0.15;
     expect(calculateFameMultiplier(25)).toBeCloseTo(expected);
   });
 
-  it('multiplier is always in range [1.00, 1.30]', () => {
+  it('multiplier is always in range [1.00, 1.15]', () => {
     for (const rank of [1, 5, 10, 25, 49, 50, 51, 100]) {
       const m = calculateFameMultiplier(rank);
       expect(m).toBeGreaterThanOrEqual(1.0);
-      expect(m).toBeLessThanOrEqual(1.30 + 1e-9);
+      expect(m).toBeLessThanOrEqual(1.15 + 1e-9);
     }
   });
 });
@@ -67,11 +67,11 @@ describe('calculateFameMultiplier', () => {
 // ── calculateFamePremiums ────────────────────────────────────────────────────
 
 describe('calculateFamePremiums', () => {
-  it('rank-1 player gets multiplier 1.30', () => {
+  it('rank-1 player gets multiplier 1.15', () => {
     const players = [makePlayer('Scottie Scheffler', 1), makePlayer('Field Player', 60)];
     const premiums = calculateFamePremiums(players);
     const scheffler = premiums.find((p) => p.playerName === 'Scottie Scheffler')!;
-    expect(scheffler.multiplier).toBeCloseTo(1.30);
+    expect(scheffler.multiplier).toBeCloseTo(1.15);
   });
 
   it('player ranked at cutoff gets 1.00', () => {
@@ -88,7 +88,7 @@ describe('calculateFamePremiums', () => {
 
   it('returns correct multiplier for a mid-ranked player', () => {
     const players = [makePlayer('Rory McIlroy', 2)];
-    const expected = 1 + ((FAME_RANK_CUTOFF - 2) / (FAME_RANK_CUTOFF - 1)) * 0.30;
+    const expected = 1 + ((FAME_RANK_CUTOFF - 2) / (FAME_RANK_CUTOFF - 1)) * 0.15;
     expect(calculateFamePremiums(players)[0].multiplier).toBeCloseTo(expected);
   });
 

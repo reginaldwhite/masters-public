@@ -6,9 +6,12 @@ dist
 
 # Sensitive files
 datagolf api key
+*.pem
+*.crt
 
 # Reference HTML files
 *.html
+!index.html
 
 # Editor
 .DS_Store
@@ -29,3 +32,4 @@ Thumbs.db
 
 # Screenshots
 *.png
+.vercel

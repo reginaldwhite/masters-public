@@ -7,10 +7,19 @@ export interface Player {
   isAmateur: boolean;
   payout2025: number;
   finish2025: string;
+  payout2024?: number;
+  finish2024?: string;
+  payout2023?: number;
+  finish2023?: string;
   sgOtt?: number;
   sgApp?: number;
   sgAtg?: number;
   sgPutt?: number;
+  // Live tournament data (populated from in-play endpoint)
+  currentScore?: number;
+  currentPos?: string;
+  thru?: number;
+  today?: number;
 }
 
 export interface PositionProbabilities {
@@ -39,6 +48,7 @@ export interface AuctionEntry {
   price: number;
   auctionOrder: number;
   sold: boolean;
+  owned?: boolean;
 }
 
 export interface PayoutConfig {
@@ -53,5 +63,14 @@ export interface FamePremium {
 
 export interface CourseFit {
   playerName: string;
-  multiplier: number;
+  score: number;  // -1 (worst fit) to +1 (best fit)
+}
+
+export interface AmateurBet {
+  id: number;        // unique id
+  playerName: string;
+  category: string;  // e.g. "US Am", "British Am"
+  price: number;
+  buyer: string;
+  owned: boolean;
 }

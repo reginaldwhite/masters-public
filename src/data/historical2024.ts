@@ -1,0 +1,15 @@
+export const payouts2024: Record<string, { payout: number; finish: string }> = {
+  'Scottie Scheffler':    { payout: 4858, finish: '1st'        },
+  'Ludvig Aberg':         { payout: 2720, finish: '2nd'        },
+  'Tommy Fleetwood':      { payout: 2008, finish: 'T3'         },
+  'Max Homa':             { payout: 2008, finish: 'T3'         },
+  'Collin Morikawa':      { payout: 2008, finish: 'T3'         },
+  'Cameron Smith':        { payout: 1457, finish: 'T6'         },
+  'Bryson DeChambeau':    { payout: 1457, finish: 'T6'         },
+  'Xander Schauffele':    { payout: 972,  finish: '8th'        },
+  'Cameron Young':        { payout: 389,  finish: 'T9'         },
+  'Tyrrell Hatton':       { payout: 389,  finish: 'T9'         },
+  'Phil Mickelson':       { payout: 389,  finish: 'Low Senior' },
+  'Emiliano Grillo':      { payout: 389,  finish: 'High Score' },
+  'Neal Shipley':         { payout: 389,  finish: 'Low Am'     },
+};

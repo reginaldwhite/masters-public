@@ -9,6 +9,8 @@ import Fuse from 'fuse.js';
 import type { Player, Team } from '../types';
 import type { ParsedTeam } from './teamParser';
 import { payouts2025 } from '../data/historical2025';
+import { payouts2024 } from '../data/historical2024';
+import { payouts2023 } from '../data/historical2023';
 
 /** Default Fuse.js score threshold — lower is stricter. */
 const DEFAULT_MATCH_THRESHOLD = 0.4;
@@ -52,11 +54,21 @@ function fuzzyFind<T>(fuse: Fuse<T>, name: string, threshold: number): T | null 
 /**
  * Enrich a Player with 2025 historical payout data using fuzzy matching.
  */
-function applyHistoricalPayout(player: Player, payoutFuse: Fuse<{ name: string; payout: number; finish: string }>, threshold: number): void {
-  const match = fuzzyFind(payoutFuse, player.name, threshold);
-  if (match) {
-    player.payout2025 = match.payout;
-    player.finish2025 = match.finish;
+function applyHistoricalPayout(player: Player, payoutFuse: Fuse<{ name: string; payout: number; finish: string }>, payout2024Fuse: Fuse<{ name: string; payout: number; finish: string }>, payout2023Fuse: Fuse<{ name: string; payout: number; finish: string }>, threshold: number): void {
+  const match2025 = fuzzyFind(payoutFuse, player.name, threshold);
+  if (match2025) {
+    player.payout2025 = match2025.payout;
+    player.finish2025 = match2025.finish;
+  }
+  const match2024 = fuzzyFind(payout2024Fuse, player.name, threshold);
+  if (match2024) {
+    player.payout2024 = match2024.payout;
+    player.finish2024 = match2024.finish;
+  }
+  const match2023 = fuzzyFind(payout2023Fuse, player.name, threshold);
+  if (match2023) {
+    player.payout2023 = match2023.payout;
+    player.finish2023 = match2023.finish;
   }
 }
 
@@ -94,6 +106,28 @@ export function matchPlayersToTeams(
     includeScore: true,
   });
 
+  const payout2024Entries = Object.entries(payouts2024).map(([name, data]) => ({
+    name,
+    payout: data.payout,
+    finish: data.finish,
+  }));
+  const payout2024Fuse = new Fuse(payout2024Entries, {
+    keys: ['name'],
+    threshold,
+    includeScore: true,
+  });
+
+  const payout2023Entries = Object.entries(payouts2023).map(([name, data]) => ({
+    name,
+    payout: data.payout,
+    finish: data.finish,
+  }));
+  const payout2023Fuse = new Fuse(payout2023Entries, {
+    keys: ['name'],
+    threshold,
+    includeScore: true,
+  });
+
   return teams.map((parsed) => {
     const players: Player[] = parsed.playerNames.map((rawName, idx) => {
       const isSenior = parsed.seniorFlags[idx];
@@ -115,8 +149,8 @@ export function matchPlayersToTeams(
         }
       }
 
-      // Enrich with 2025 payout data
-      applyHistoricalPayout(player, payoutFuse, threshold);
+      // Enrich with historical payout data
+      applyHistoricalPayout(player, payoutFuse, payout2024Fuse, payout2023Fuse, threshold);
 
       return player;
     });

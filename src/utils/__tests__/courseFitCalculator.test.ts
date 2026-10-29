@@ -80,17 +80,18 @@ describe('calculateCourseFits', () => {
     expect(calculateCourseFits([])).toEqual([]);
   });
 
-  it('player with no SG data gets exactly 1.00', () => {
+  it('player with no SG data gets exactly 0', () => {
     const players = [
       makePlayer('Scottie Scheffler', { sgOtt: 0.708, sgApp: 0.899, sgAtg: 0.396, sgPutt: 0.568 }),
+      makePlayer('Worst Fit', { sgOtt: -0.5, sgApp: -0.5, sgAtg: -0.5, sgPutt: -0.5 }),
       makePlayer('No Data Player'), // no SG fields
     ];
     const fits = calculateCourseFits(players);
     const noData = fits.find((f) => f.playerName === 'No Data Player')!;
-    expect(noData.multiplier).toBe(1.0);
+    expect(noData.score).toBe(0);
   });
 
-  it('best player (highest weighted score) gets exactly 1.30', () => {
+  it('best player (highest weighted score) gets exactly +1', () => {
     const players = [
       makePlayer('Scottie Scheffler', { sgOtt: 0.708, sgApp: 0.899, sgAtg: 0.396, sgPutt: 0.568 }),
       makePlayer('Rory McIlroy',       { sgOtt: 0.5,   sgApp: 0.6,   sgAtg: 0.2,   sgPutt: 0.3 }),
@@ -98,10 +99,20 @@ describe('calculateCourseFits', () => {
     ];
     const fits = calculateCourseFits(players);
     const best = fits.find((f) => f.playerName === 'Scottie Scheffler')!;
-    expect(best.multiplier).toBeCloseTo(1.30);
+    expect(best.score).toBeCloseTo(1.0);
   });
 
-  it('all multipliers are in the range [1.00, 1.30]', () => {
+  it('worst player (lowest weighted score) gets exactly -1', () => {
+    const players = [
+      makePlayer('Best',  { sgOtt: 1.0, sgApp: 1.0, sgAtg: 1.0, sgPutt: 1.0 }),
+      makePlayer('Worst', { sgOtt: -1.0, sgApp: -1.0, sgAtg: -1.0, sgPutt: -1.0 }),
+    ];
+    const fits = calculateCourseFits(players);
+    const worst = fits.find((f) => f.playerName === 'Worst')!;
+    expect(worst.score).toBeCloseTo(-1.0);
+  });
+
+  it('all scores are in the range [-1, +1]', () => {
     const players = [
       makePlayer('Scottie Scheffler', { sgOtt: 0.708, sgApp: 0.899, sgAtg: 0.396, sgPutt: 0.568 }),
       makePlayer('Rory McIlroy',       { sgOtt: 0.5,   sgApp: 0.6,   sgAtg: 0.2,   sgPutt: 0.3 }),
@@ -109,23 +120,24 @@ describe('calculateCourseFits', () => {
     ];
     const fits = calculateCourseFits(players);
     for (const fit of fits) {
-      expect(fit.multiplier).toBeGreaterThanOrEqual(1.0);
-      expect(fit.multiplier).toBeLessThanOrEqual(1.30 + 1e-9); // small epsilon for float
+      expect(fit.score).toBeGreaterThanOrEqual(-1.0);
+      expect(fit.score).toBeLessThanOrEqual(1.0 + 1e-9);
     }
   });
 
-  it('second-best player gets a multiplier strictly less than 1.30', () => {
+  it('second-best player gets a score strictly between -1 and +1', () => {
     const players = [
       makePlayer('Player A', { sgOtt: 1.0, sgApp: 1.0, sgAtg: 1.0, sgPutt: 1.0 }),
       makePlayer('Player B', { sgOtt: 0.5, sgApp: 0.5, sgAtg: 0.5, sgPutt: 0.5 }),
+      makePlayer('Player C', { sgOtt: 0.0, sgApp: 0.0, sgAtg: 0.0, sgPutt: 0.0 }),
     ];
     const fits = calculateCourseFits(players);
     const second = fits.find((f) => f.playerName === 'Player B')!;
-    expect(second.multiplier).toBeLessThan(1.30);
-    expect(second.multiplier).toBeGreaterThan(1.0);
+    expect(second.score).toBeLessThan(1.0);
+    expect(second.score).toBeGreaterThan(-1.0);
   });
 
-  it('field with only one player with SG data: that player gets 1.30', () => {
+  it('field with only one player with SG data: that player gets 0 (no range)', () => {
     const players = [
       makePlayer('Solo Data', { sgOtt: 0.5, sgApp: 0.8, sgAtg: 0.6, sgPutt: 0.4 }),
       makePlayer('Ghost A'),
@@ -133,7 +145,7 @@ describe('calculateCourseFits', () => {
     ];
     const fits = calculateCourseFits(players);
     const solo = fits.find((f) => f.playerName === 'Solo Data')!;
-    expect(solo.multiplier).toBeCloseTo(1.30);
+    expect(solo.score).toBe(0);
   });
 
   it('result contains an entry for every input player', () => {
@@ -147,15 +159,16 @@ describe('calculateCourseFits', () => {
     expect(fits.map((f) => f.playerName)).toEqual(['Alpha', 'Beta', 'Gamma']);
   });
 
-  it('normalization: multiplier matches formula 1 + (score/maxScore)*0.3', () => {
+  it('normalization: midpoint player gets score 0', () => {
     const players = [
       makePlayer('High', { sgOtt: 1.0, sgApp: 1.0, sgAtg: 1.0, sgPutt: 1.0 }),
-      makePlayer('Low',  { sgOtt: 0.5, sgApp: 0.5, sgAtg: 0.5, sgPutt: 0.5 }),
+      makePlayer('Mid',  { sgOtt: 0.5, sgApp: 0.5, sgAtg: 0.5, sgPutt: 0.5 }),
+      makePlayer('Low',  { sgOtt: 0.0, sgApp: 0.0, sgAtg: 0.0, sgPutt: 0.0 }),
     ];
     const fits = calculateCourseFits(players);
-    // High score = 1.0 (max), multiplier = 1.30
-    // Low score = 0.5, maxScore = 1.0 → multiplier = 1 + (0.5/1.0)*0.3 = 1.15
-    const low = fits.find((f) => f.playerName === 'Low')!;
-    expect(low.multiplier).toBeCloseTo(1.15);
+    // High raw = 1.0, Low raw = 0.0, Mid raw = 0.5
+    // score = ((0.5 - 0) / (1.0 - 0)) * 2 - 1 = 0
+    const mid = fits.find((f) => f.playerName === 'Mid')!;
+    expect(mid.score).toBeCloseTo(0);
   });
 });

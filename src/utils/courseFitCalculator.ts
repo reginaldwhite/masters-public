@@ -34,32 +34,35 @@ export function calculateCourseFitScore(
 }
 
 /**
- * Calculate Augusta course-fit multipliers for all players in the field.
+ * Calculate Augusta course-fit scores for all players in the field.
  *
- * Players with SG data get a multiplier from 1.00 to 1.30 based on their
- * weighted Augusta score relative to the best player in the field.
- * Players missing ALL SG data receive a neutral 1.00 multiplier.
+ * Players with SG data get a score from -1 (worst fit) to +1 (best fit)
+ * based on their weighted Augusta score relative to the field.
+ * Players missing ALL SG data receive a neutral 0 score.
  *
- * Normalization: 1.0 + (score / maxScore) × 0.30
- * (mirrors fameCalculator.ts)
+ * Normalization: raw scores are linearly mapped so that
+ *   max raw score → +1
+ *   min raw score → -1
  */
 export function calculateCourseFits(players: Player[]): CourseFit[] {
-  const scores = players.map((p) => {
+  const raw = players.map((p) => {
     const hasSgData = p.sgOtt != null || p.sgApp != null || p.sgAtg != null || p.sgPutt != null;
-    const score = hasSgData
+    const rawScore = hasSgData
       ? calculateCourseFitScore(p.sgOtt, p.sgApp, p.sgAtg, p.sgPutt)
       : null; // null = no data
-    return { playerName: p.name, score };
+    return { playerName: p.name, rawScore };
   });
 
-  // Only consider players with actual SG data for the max
-  const dataScores = scores.filter((s) => s.score != null).map((s) => s.score as number);
-  const maxScore = dataScores.length > 0 ? Math.max(...dataScores) : 1;
+  // Only consider players with actual SG data
+  const dataScores = raw.filter((s) => s.rawScore != null).map((s) => s.rawScore as number);
+  const maxRaw = dataScores.length > 0 ? Math.max(...dataScores) : 0;
+  const minRaw = dataScores.length > 0 ? Math.min(...dataScores) : 0;
+  const range = maxRaw - minRaw;
 
-  return scores.map(({ playerName, score }) => ({
+  return raw.map(({ playerName, rawScore }) => ({
     playerName,
-    multiplier: score != null && maxScore > 0
-      ? Math.max(1.0, 1.0 + (score / maxScore) * 0.3)
-      : 1.0,
+    score: rawScore != null && range > 0
+      ? ((rawScore - minRaw) / range) * 2 - 1  // maps min→-1, max→+1
+      : 0,
   }));
 }

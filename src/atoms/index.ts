@@ -1,19 +1,52 @@
 import { atom } from 'jotai';
-import type { Player, Team, AuctionEntry, PayoutConfig, FamePremium, CourseFit } from '../types';
+import { atomWithStorage } from 'jotai/utils';
+import type { Player, Team, AuctionEntry, PayoutConfig, FamePremium, CourseFit, AmateurBet } from '../types';
 import { calculateAllTeamEVs } from '../utils/evCalculator';
 
 // Current view
-export type View = 'dashboard' | 'setup';
-export const viewAtom = atom<View>('setup');
+export type View = 'dashboard' | 'details' | 'myteams' | 'players';
 
-// Player data fetched from API
-export const playersAtom = atom<Player[]>([]);
+// Custom storage for Map<number, AuctionEntry> — Maps can't be JSON-serialised directly
+const auctionMapStorage = {
+  getItem(key: string, initialValue: Map<number, AuctionEntry>): Map<number, AuctionEntry> {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return initialValue;
+      const entries: [number, AuctionEntry][] = JSON.parse(raw);
+      return new Map(entries);
+    } catch {
+      return initialValue;
+    }
+  },
+  setItem(key: string, value: Map<number, AuctionEntry>): void {
+    localStorage.setItem(key, JSON.stringify(Array.from(value.entries())));
+  },
+  removeItem(key: string): void {
+    localStorage.removeItem(key);
+  },
+};
 
-// Team groupings
-export const teamsAtom = atom<Team[]>([]);
+// Always start on dashboard
+const getInitialView = (): View => 'dashboard';
 
-// Auction tracking: groupId -> AuctionEntry
-export const auctionAtom = atom<Map<number, AuctionEntry>>(new Map());
+export const viewAtom = atom<View>(getInitialView());
+
+// Player data fetched from API — persisted so the field survives a refresh
+export const playersAtom = atomWithStorage<Player[]>('calcutta_players', []);
+
+// Baseline (pre-tournament) probability snapshot — saved on first fetch, never overwritten
+export const baselinePlayersAtom = atomWithStorage<Player[]>('calcutta_baseline_players', []);
+export const baselineTimestampAtom = atomWithStorage<string>('calcutta_baseline_ts', '');
+
+// Team groupings — persisted (drives the auto-navigation logic above)
+export const teamsAtom = atomWithStorage<Team[]>('calcutta_teams', []);
+
+// Auction tracking: groupId -> AuctionEntry — persisted with custom Map serialiser
+export const auctionAtom = atomWithStorage<Map<number, AuctionEntry>>(
+  'calcutta_auction',
+  new Map(),
+  auctionMapStorage,
+);
 
 // Derived atom: total pool = sum of all auction prices
 export const poolAtom = atom<number>((get) => {
@@ -48,32 +81,42 @@ export const payoutConfigAtom = atom<PayoutConfig>({
 });
 
 // Fame premiums for popular players
-export const famePremiumsAtom = atom<FamePremium[]>([]);
+export const famePremiumsAtom = atomWithStorage<FamePremium[]>('calcutta_fame', []);
 
-// DataGolf rankings map: dg_id → datagolf_rank (populated after fetch)
+// DataGolf rankings map: dg_id → datagolf_rank (populated after fetch, not persisted)
 export const dgRankingsAtom = atom<Map<number, number>>(new Map());
 
 // Course fit multipliers per player
-export const courseFitsAtom = atom<CourseFit[]>([]);
+export const courseFitsAtom = atomWithStorage<CourseFit[]>('calcutta_fits', []);
 
 // List of amateur player names
-export const amateursAtom = atom<string[]>([]);
+export const amateursAtom = atomWithStorage<string[]>('calcutta_amateurs', []);
+
+// Amateur side bets (calcutta side auction for individual amateurs)
+export const amateurBetsAtom = atomWithStorage<AmateurBet[]>('calcutta_amateur_bets', []);
 
 // ── Dashboard-specific atoms ─────────────────────────────────────────────────
 
 // The groupId currently "on the block" (being auctioned)
 export const onTheBlockAtom = atom<number | null>(null);
 
+// Derived: all players flattened from teams — these carry the correct isSenior/isAmateur
+// flags set by the team parser, unlike playersAtom which is raw API data.
+export const teamPlayersAtom = atom<Player[]>((get) => {
+  const teams = get(teamsAtom);
+  return teams.flatMap((t) => t.players);
+});
+
 // Derived: teams with recalculated EVs based on current pool & payout config
 export const teamsWithEVAtom = atom<Team[]>((get) => {
   const teams = get(teamsAtom);
-  const players = get(playersAtom);
+  const teamPlayers = get(teamPlayersAtom); // use flagged players, not raw API
   const payoutConfig = get(payoutConfigAtom);
   const pool = get(poolAtom);
 
   if (teams.length === 0) return [];
 
-  return calculateAllTeamEVs(teams, players, payoutConfig, pool > 0 ? pool : undefined);
+  return calculateAllTeamEVs(teams, teamPlayers, payoutConfig, pool > 0 ? pool : undefined);
 });
 
 // Derived: teams that have NOT been sold
@@ -94,4 +137,32 @@ export const soldTeamsAtom = atom<Team[]>((get) => {
 export const teamsSoldCountAtom = atom<number>((get) => {
   const auction = get(auctionAtom);
   return auction.size;
+});
+
+// ── Estimated pot ────────────────────────────────────────────────────────────
+// Starts at last year's total ($26,600).
+// After each sale, scales up/down based on whether actual prices are above or
+// below each team's raw EV share of the base pot.
+export const BASE_POT = 26_600;
+
+export const estimatedPotAtom = atom<number>((get) => {
+  const auction = get(auctionAtom);
+  const teams = get(teamsWithEVAtom);
+
+  if (auction.size === 0) return BASE_POT;
+
+  let actualTotal = 0;
+  let expectedTotal = 0;
+
+  auction.forEach((entry) => {
+    const team = teams.find((t) => t.groupId === entry.groupId);
+    if (team) {
+      actualTotal += entry.price;
+      expectedTotal += team.ev * BASE_POT;
+    }
+  });
+
+  if (expectedTotal <= 0) return BASE_POT;
+
+  return BASE_POT * (actualTotal / expectedTotal);
 });

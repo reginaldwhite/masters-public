@@ -195,6 +195,121 @@ export async function fetchDGRankings(): Promise<Map<number, number>> {
   return map;
 }
 
+// ── Live (in-tournament) model types ─────────────────────────────────────────
+
+/**
+ * Shape of each player record returned by the /preds/in-play endpoint.
+ * Intermediate positions (top_2–top_4, top_6–top_9) are absent; the EV
+ * calculator will interpolate them from top_5 / top_10.
+ */
+export interface DGLivePlayerRaw {
+  dg_id: number;
+  player_name: string; // "Last, First"
+  country: string;
+  current_pos: string;
+  current_score: number;
+  today: number;
+  thru: number;
+  round: number;
+  R1: number | null;
+  R2: number | null;
+  R3: number | null;
+  R4: number | null;
+  win: number;
+  top_5: number;
+  top_10: number;
+  top_20: number;
+  make_cut: number;
+}
+
+export interface DGLiveResponse {
+  data: DGLivePlayerRaw[];
+  info: {
+    current_round: number;
+    event_name: string;
+    last_update: string;
+  };
+}
+
+/**
+ * Fetch live in-tournament predictions from DataGolf (/preds/in-play).
+ * Only win, top_5, top_10, top_20, and make_cut probabilities are available;
+ * intermediate positions are left as 0 for the EV calculator to interpolate.
+ */
+export async function fetchLivePredictions(): Promise<{
+  players: Player[];
+  eventName: string;
+  lastUpdated: string;
+}> {
+  const apiKey = import.meta.env.VITE_DATAGOLF_API_KEY ?? '';
+  if (!apiKey) throw new DataGolfError('API key is required');
+
+  const url = `${PROXY_BASE}/preds/in-play?tour=pga&file_format=json&key=${encodeURIComponent(apiKey)}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (err) {
+    throw new DataGolfError(
+      `Network error fetching live predictions: ${(err as Error).message}`,
+    );
+  }
+
+  if (response.status === 401 || response.status === 403) {
+    throw new DataGolfError('Invalid DataGolf API key', response.status);
+  }
+
+  if (!response.ok) {
+    throw new DataGolfError(
+      `DataGolf live API returned status ${response.status}`,
+      response.status,
+    );
+  }
+
+  let data: DGLiveResponse;
+  try {
+    data = await response.json();
+  } catch {
+    throw new DataGolfError('Failed to parse DataGolf live API response as JSON');
+  }
+
+  if (!Array.isArray(data.data) || data.data.length === 0) {
+    throw new DataGolfError('No live player predictions found in API response');
+  }
+
+  const players: Player[] = data.data.map((raw) => ({
+    name: normalizeName(raw.player_name),
+    dgId: raw.dg_id,
+    probabilities: {
+      win: raw.win ?? 0,
+      top2: 0,
+      top3: 0,
+      top4: 0,
+      top5: raw.top_5 ?? 0,
+      top6: 0,
+      top7: 0,
+      top8: 0,
+      top9: 0,
+      top10: raw.top_10 ?? 0,
+      makeCut: raw.make_cut ?? 0,
+    },
+    isSenior: false,
+    isAmateur: false, // not provided by live endpoint; set via AMATEURS_2026 in team matching
+    payout2025: 0,
+    finish2025: '',
+    currentScore: raw.current_score,
+    currentPos: raw.current_pos,
+    thru: raw.thru,
+    today: raw.today,
+  }));
+
+  return {
+    players,
+    eventName: data.info?.event_name ?? '',
+    lastUpdated: data.info?.last_update ?? '',
+  };
+}
+
 export interface FetchPredictionsOptions {
   /** Which model to use – defaults to "baseline_history_fit" (baseline + course history + course fit) */
   model?: 'baseline' | 'baseline_history_fit';

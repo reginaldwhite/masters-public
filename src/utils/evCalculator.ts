@@ -1,4 +1,5 @@
 import type { Player, Team, PositionProbabilities, PayoutConfig } from '../types';
+import { getMastersHistoryScore } from '../data/mastersHistory';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,10 +48,14 @@ function distributeWithDecay(totalProb: number, weights: number[]): number[] {
  * gets no boost. After normalization the total pool is preserved, so the
  * boost redistributes EV from the bottom of the board to the top.
  *
- * alpha = 0.20 → 20% premium for 1st, linearly declining to 0% for 10th.
+ * alpha = 0.30 → 30% premium for 1st, linearly declining to 0% for 10th.
  * Set to 0 to disable.
+ *
+ * Increased from 0.20 to 0.30 based on 2025 post-tournament analysis:
+ * regression slope of 2.36 and top-9 teams returning 1.457x EV suggests
+ * the market values contention more than the original 20% captured.
  */
-export const CONTENTION_BOOST = 0.2;
+export const CONTENTION_BOOST = 0.3;
 
 /** Position weight: 1st gets max boost, 10th gets 1.0 (no boost). */
 export function getPositionBoost(
@@ -86,6 +91,51 @@ export function getBoostNormalization(
     const tenthPct = ninth.percentage * 0.9;
     unboosted += tenthPct;
     boosted += tenthPct * getPositionBoost(10, alpha);
+  }
+
+  return boosted > 0 ? unboosted / boosted : 1;
+}
+
+// ── Masters History Boost ────────────────────────────────────────────────────
+
+/**
+ * Players who have performed well at Augusta in the last 5 years get
+ * an EV multiplier on their main-pool payout expectation.
+ *
+ * The boost is normalised across the full field so the total pool is
+ * preserved — it redistributes EV from players without Augusta pedigree
+ * toward those with proven Masters history.
+ *
+ * alpha = 0.15 → a player with a perfect history score (all wins) would
+ * see a 15% increase; most real players get 2-8%.
+ * Set to 0 to disable.
+ */
+export const MASTERS_HISTORY_ALPHA: number = 0.15;
+
+/** Individual history multiplier for one player's main-pool EV. */
+export function getMastersHistoryBoost(playerName: string): number {
+  return 1 + MASTERS_HISTORY_ALPHA * getMastersHistoryScore(playerName);
+}
+
+/**
+ * History-boost normalisation factor.
+ * Equals sum(raw_ev) / sum(raw_ev × historyBoost) across all players,
+ * ensuring the total pool is preserved after boosting.
+ */
+export function getHistoryBoostNormalization(
+  allPlayers: Player[],
+  payoutConfig: PayoutConfig,
+): number {
+  if (MASTERS_HISTORY_ALPHA === 0) return 1;
+
+  let unboosted = 0;
+  let boosted = 0;
+
+  for (const player of allPlayers) {
+    const ev = calculatePlayerEV(player.probabilities, payoutConfig);
+    const boost = getMastersHistoryBoost(player.name);
+    unboosted += ev;
+    boosted += ev * boost;
   }
 
   return boosted > 0 ? unboosted / boosted : 1;
@@ -253,7 +303,10 @@ export function calculateHighScoreEV(
   player: Player,
   allPlayers: Player[],
 ): number {
-  const eligible = allPlayers.filter((p) => p.probabilities.makeCut > 0);
+  // Seniors are not eligible for the High Score payout
+  if (player.isSenior) return 0;
+
+  const eligible = allPlayers.filter((p) => p.probabilities.makeCut > 0 && !p.isSenior);
   if (eligible.length === 0) return 0;
 
   // Sort ascending by makeCut — weakest first
@@ -283,14 +336,20 @@ export function calculateHighScoreEV(
 
 /**
  * Total EV for a team = sum of each member's main-pool EV + bonus EVs.
+ * When historyNorm is provided, each player's main-pool EV is multiplied
+ * by their individual Masters history boost (normalised to preserve pool).
  */
 export function calculateTeamEV(
   team: Team,
   allPlayers: Player[],
   payoutConfig: PayoutConfig,
+  historyNorm?: number,
 ): number {
   return team.players.reduce((sum, player) => {
-    const mainEV = calculatePlayerEV(player.probabilities, payoutConfig);
+    let mainEV = calculatePlayerEV(player.probabilities, payoutConfig);
+    if (historyNorm != null) {
+      mainEV *= getMastersHistoryBoost(player.name) * historyNorm;
+    }
     const seniorEV = calculateLowSeniorEV(player, allPlayers);
     const amEV = calculateLowAmEV(player, allPlayers);
     const highScoreEV = calculateHighScoreEV(player, allPlayers);
@@ -301,6 +360,7 @@ export function calculateTeamEV(
 /**
  * Calculate EVs for all teams, sort descending, and return updated teams.
  * Optionally populates `evDollars` when `poolTotal` is provided.
+ * Applies Masters history boost (normalised) to main-pool EVs.
  */
 export function calculateAllTeamEVs(
   teams: Team[],
@@ -308,8 +368,10 @@ export function calculateAllTeamEVs(
   payoutConfig: PayoutConfig,
   poolTotal?: number,
 ): Team[] {
+  const historyNorm = getHistoryBoostNormalization(allPlayers, payoutConfig);
+
   const updated = teams.map((team) => {
-    const ev = calculateTeamEV(team, allPlayers, payoutConfig);
+    const ev = calculateTeamEV(team, allPlayers, payoutConfig, historyNorm);
     return {
       ...team,
       ev,
